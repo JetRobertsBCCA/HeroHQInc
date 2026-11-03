@@ -1,0 +1,27 @@
+[
+	{
+		"id": "vanguard",
+		"name_key": "roles.vanguard",
+		"growth": {"power": 2, "speed": 1, "skill": 1}
+	},
+	{
+		"id": "striker",
+		"name_key": "roles.striker",
+		"growth": {"power": 1, "speed": 2, "skill": 1}
+	},
+	{
+		"id": "tech",
+		"name_key": "roles.tech",
+		"growth": {"power": 1, "speed": 1, "skill": 2}
+	},
+	{
+		"id": "support",
+		"name_key": "roles.support",
+		"growth": {"power": 1, "speed": 1, "skill": 2}
+	},
+	{
+		"id": "mystic",
+		"name_key": "roles.mystic",
+		"growth": {"power": 1, "speed": 1, "skill": 2}
+	}
+]

@@ -1,0 +1,22 @@
+{
+	"roster_capacity": 12,
+	"starting_agents": [
+		{
+			"id": "hero_volt",
+			"name_key": "agents.hero_volt",
+			"role_id": "striker",
+			"level": 1,
+			"xp": 0,
+			"activity": "available",
+			"attributes": {"power": 5, "speed": 5, "skill": 4}
+		}
+	],
+	"generation": {
+		"candidate_count": 2,
+		"tiers": [
+			{"id": "standard", "weight": 65},
+			{"id": "advanced", "weight": 27},
+			{"id": "elite", "weight": 8}
+		]
+	}
+}
