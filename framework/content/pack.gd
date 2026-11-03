@@ -27,6 +27,9 @@ var leveling: Dictionary = {}
 ## Paid training: {resource_id, base_cost, cost_growth, xp_per_session}.
 ## Empty means the pack has no training.
 var training: Dictionary = {}
+## Rebirth economy: {resource_id, threshold_amount, scale, exponent,
+## gain_factor, bonus_per_chip, min_level}. Empty means no rebirth.
+var prestige: Dictionary = {}
 ## [{id, label_key}] bottom navigation, in display order.
 var navigation: Array = []
 
@@ -64,7 +67,7 @@ func stage_ids() -> Array:
 
 
 func task_ids() -> Array:
-	var ids: Array = missions.keys()
+	var ids := missions.keys()
 	ids.sort()
 	return ids
 
