@@ -113,6 +113,8 @@ static func check_rules(document: Dictionary, manifest: Dictionary) -> Array[Dic
 					"invalid_value", "agents", "leveling.attribute_gain_per_level must be >= 0.",
 				))
 
+	errors.append_array(check_prestige(manifest))
+
 	var training: Variant = document.get("training", null)
 	if training != null:
 		if not (training is Dictionary):
@@ -138,6 +140,53 @@ static func check_rules(document: Dictionary, manifest: Dictionary) -> Array[Dic
 			errors.append(PackValidator.error(
 				"invalid_value", "agents", "training.xp_per_session must be >= 0.",
 			))
+	return errors
+
+
+## Optional rebirth economy. Absent means the pack has no rebirth; present must
+## be internally consistent, because its numbers set the long-term pace.
+static func check_prestige(manifest: Dictionary) -> Array[Dictionary]:
+	var errors: Array[Dictionary] = []
+	var prestige: Variant = manifest.get("prestige", null)
+	if prestige == null:
+		return errors
+	if not (prestige is Dictionary):
+		errors.append(PackValidator.error("invalid_value", "manifest", "prestige must be an object."))
+		return errors
+	var rules: Dictionary = prestige
+	var resource_ids := PackValidator.string_set(manifest.get("resources", []))
+	var resource_id := str(rules.get("resource_id", ""))
+	if not resource_id.is_empty() and not resource_ids.has(resource_id):
+		errors.append(PackValidator.error(
+			"dangling_reference", "manifest",
+			"prestige.resource_id '%s' is not a declared resource." % resource_id,
+		))
+	if float(rules.get("threshold_amount", 0)) < 0.0:
+		errors.append(PackValidator.error(
+			"invalid_value", "manifest", "prestige.threshold_amount must be >= 0.",
+		))
+	if float(rules.get("scale", 0)) <= 0.0:
+		errors.append(PackValidator.error(
+			"invalid_value", "manifest", "prestige.scale must be > 0.",
+		))
+	var exponent := float(rules.get("exponent", 0.5))
+	if exponent <= 0.0 or exponent > 1.0:
+		errors.append(PackValidator.error(
+			"invalid_value", "manifest",
+			"prestige.exponent must be in (0, 1]; a steeper exponent makes late runs trivial.",
+		))
+	if float(rules.get("gain_factor", 0)) <= 0.0:
+		errors.append(PackValidator.error(
+			"invalid_value", "manifest", "prestige.gain_factor must be > 0.",
+		))
+	if float(rules.get("bonus_per_chip", 0)) < 0.0:
+		errors.append(PackValidator.error(
+			"invalid_value", "manifest", "prestige.bonus_per_chip must be >= 0.",
+		))
+	if int(rules.get("min_level", 1)) < 1:
+		errors.append(PackValidator.error(
+			"invalid_value", "manifest", "prestige.min_level must be >= 1.",
+		))
 	return errors
 
 
