@@ -67,7 +67,7 @@ func stage_ids() -> Array:
 
 
 func task_ids() -> Array:
-	var ids := missions.keys()
+	var ids: Array = missions.keys()
 	ids.sort()
 	return ids
 
