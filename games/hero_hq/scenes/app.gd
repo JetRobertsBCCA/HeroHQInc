@@ -136,6 +136,7 @@ func _on_tab_selected(tab_id: String) -> void:
 		_roster = RosterScreen.new()
 		_roster.name = "RosterScreen"
 		_roster.train_requested.connect(_on_train_requested)
+		_roster.recruit_requested.connect(_on_recruit_requested)
 		_roster.refresh(_pack, _state)
 		_shell.set_content(_roster)
 		return
@@ -186,6 +187,26 @@ func _on_train_requested(agent_id: String) -> void:
 		_refresh_content()
 		return
 	_record_events(result.get("events", []))
+	SaveService.save_state(_state)
+	_refresh_content()
+
+
+func _on_recruit_requested() -> void:
+	var result := Recruitment.recruit(_state, _pack)
+	if not result.get("ok", false):
+		_log("%s: %s" % [
+			_pack.label("ui.recruit", "Recruit"),
+			_pack.label(
+				"ui.blocked_%s" % str(result.get("code", "")),
+				str(result.get("code", "")),
+			),
+		])
+		_refresh_content()
+		return
+	_log("%s %s" % [
+		_pack.label("ui.recruited", "Recruited"),
+		str(result["name"]),
+	])
 	SaveService.save_state(_state)
 	_refresh_content()
 
