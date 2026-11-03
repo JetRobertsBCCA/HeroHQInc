@@ -30,6 +30,7 @@ var _events_log: Array[String] = []
 var _task_board: TaskBoard
 var _roster: RosterScreen
 var _prestige_screen: PrestigeScreen
+var _auto_task_id: String = ""
 var _tick_count: int = 0
 
 
@@ -108,6 +109,7 @@ func _on_tick() -> void:
 			_record_events(events)
 			SaveService.save_state(_state)
 			_refresh_content()
+			_maybe_auto_repeat(now)
 		else:
 			_shell.refresh(_state)
 			if _tick_count % SAVE_EVERY_TICKS == 0:
@@ -141,6 +143,7 @@ func _on_tab_selected(tab_id: String) -> void:
 		_prestige_screen = PrestigeScreen.new()
 		_prestige_screen.name = "PrestigeScreen"
 		_prestige_screen.rebirth_requested.connect(_on_rebirth_requested)
+		_prestige_screen.research_purchase_requested.connect(_on_research_requested)
 		_prestige_screen.refresh(_pack, _state)
 		_shell.set_content(_prestige_screen)
 		return
@@ -164,6 +167,8 @@ func _on_deploy_requested(task_id: String) -> void:
 		])
 		_refresh_content()
 		return
+	if Research.unlocked(_state, _pack, Research.EFFECT_AUTO_REPEAT):
+		_auto_task_id = task_id
 	SaveService.save_state(_state)
 	_refresh_content()
 
@@ -202,6 +207,45 @@ func _on_rebirth_requested() -> void:
 		"gained": int(result["gained"]),
 		"chips": int(result["chips"]),
 	}])
+	_auto_task_id = ""
+	SaveService.save_state(_state)
+	_refresh_content()
+
+
+func _on_research_requested(branch_id: String) -> void:
+	var result := Research.buy(_state, _pack, branch_id)
+	if not result.get("ok", false):
+		_log("%s: %s" % [
+			_pack.label("research.title", "Research"),
+			_pack.label(
+				"ui.blocked_%s" % str(result.get("code", "")),
+				str(result.get("code", "")),
+			),
+		])
+		_refresh_content()
+		return
+	_log("%s %s %d" % [
+		_pack.label("research.title", "Research"),
+		_pack.label("ui.research_rank", "Rank"),
+		int(result["rank"]),
+	])
+	SaveService.save_state(_state)
+	_refresh_content()
+
+
+## Repeats the last deployed operation once it finishes, but only when the
+## research branch is bought. One repeat per completion, never a chain.
+func _maybe_auto_repeat(now: int) -> void:
+	if _auto_task_id.is_empty():
+		return
+	if not Research.unlocked(_state, _pack, Research.EFFECT_AUTO_REPEAT):
+		_auto_task_id = ""
+		return
+	if not _state.assignments.is_empty():
+		return
+	if not Simulation.deploy(_state, _pack, _auto_task_id, now).get("ok", false):
+		_auto_task_id = ""
+		return
 	SaveService.save_state(_state)
 	_refresh_content()
 
