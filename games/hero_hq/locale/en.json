@@ -104,5 +104,16 @@
 	"ui.research_done": "Research complete",
 	"ui.blocked_research_unavailable": "Research is not part of this pack",
 	"ui.blocked_research_unknown": "Unknown research",
-	"ui.blocked_research_max_rank": "Already fully researched"
+	"ui.blocked_research_max_rank": "Already fully researched",
+
+	"ui.recruit": "Recruit",
+	"ui.recruit_tier": "Tier",
+	"ui.recruited": "Recruited",
+	"ui.roster_showing": "Showing first %d of %d operatives",
+	"ui.roster_full": "Roster full",
+	"tiers.standard": "Standard",
+	"tiers.advanced": "Advanced",
+	"tiers.elite": "Elite",
+	"ui.blocked_recruitment_unavailable": "Recruitment is not part of this pack",
+	"ui.blocked_roster_full": "Roster is full"
 }
