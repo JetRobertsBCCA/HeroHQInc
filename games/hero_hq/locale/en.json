@@ -1,0 +1,45 @@
+{
+	"game.title": "HERO//HQ",
+	"game.tagline": "Agency operations online",
+
+	"tabs.hq": "HQ",
+	"tabs.heroes": "Heroes",
+	"tabs.missions": "Missions",
+	"tabs.teams": "Teams",
+	"tabs.upgrades": "Upgrades",
+
+	"roles.vanguard": "Vanguard",
+	"roles.striker": "Striker",
+	"roles.tech": "Tech",
+	"roles.support": "Support",
+	"roles.mystic": "Mystic",
+
+	"agents.hero_volt": "Volt",
+
+	"tasks.s_alley": "Alley Patrol",
+
+	"stages.street": "Street Level",
+	"stages.city": "Citywide Defense",
+	"stages.national": "National Response",
+
+	"categories.crime": "Crime",
+	"categories.rescue": "Rescue",
+	"categories.technology": "Technology",
+	"categories.paranormal": "Paranormal",
+	"categories.catastrophe": "Catastrophe",
+
+	"command.level_1": "Command Level 1",
+	"command.level_2": "Command Level 2",
+
+	"resources.credits": "Credits",
+	"resources.intel": "Intel",
+
+	"ui.network_title": "Operations Network",
+	"ui.roster_active": "Active roster",
+	"ui.status": "Status",
+	"ui.idle_status": "No operations running",
+	"ui.offline_settled": "Offline time settled",
+	"ui.section_placeholder": "This section arrives in a later milestone.",
+	"ui.pack_error_title": "Content pack failed validation",
+	"ui.pack_error_hint": "Run: godot --headless --path . -s res://tooling/validate_packs.gd"
+}
