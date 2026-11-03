@@ -30,7 +30,7 @@ func _initialize() -> void:
 		print("FAIL  %s (%d problem(s))" % [pack_id, errors.size()])
 		for error in errors:
 			print("        [%s] %s" % [str(error["code"]), str(error["message"])])
-		print("        at %s" % error_path_hint(errors))
+		print("        at %s" % str(error_path_hint(errors)))
 	print("%d pack(s) checked, %d invalid" % [pack_ids.size(), failures])
 	quit(1 if failures > 0 else 0)
 
