@@ -51,7 +51,7 @@ func test_completion_pays_once_and_frees_agents() -> void:
 
 	var early := Simulation.simulate_delta(state, 19.0, pack)
 	assert_eq((early["events"] as Array).size(), 0, "19 of 20 seconds is not a completion")
-	assert_eq(state.resource("credits"), 250.0, "no reward is paid early")
+	assert_eq(state.resource("credits"), 50.0, "no reward is paid early")
 
 	var finished := Simulation.simulate_delta(state, 1.0, pack)
 	var events: Array = finished["events"]
@@ -59,7 +59,7 @@ func test_completion_pays_once_and_frees_agents() -> void:
 	var event: Dictionary = events[0]
 	assert_eq(str(event.get("type", "")), "task_completed", "the event names the completion")
 	assert_eq(str(event.get("task_id", "")), "s_alley", "the event names the task")
-	assert_eq(state.resource("credits"), 268.0, "the reward is paid exactly once")
+	assert_eq(state.resource("credits"), 68.0, "the reward is paid exactly once")
 	assert_eq(state.assignments.size(), 0, "the assignment is cleared")
 	assert_eq(str(state.agents["hero_volt"]["activity"]), "available", "the agent is freed")
 	assert_eq(state.tasks_completed(), 1, "the lifetime counter advances")
@@ -71,8 +71,8 @@ func test_completion_awards_task_xp() -> void:
 	var state := _state(pack, 1000)
 	Simulation.assign_task(state, pack, "s_alley", ["hero_volt"], 1000)
 	Simulation.simulate_delta(state, 20.0, pack)
-	assert_eq(float(state.agents["hero_volt"]["xp"]), 24.0, "task XP comes from pack data")
-	assert_eq(int(state.agents["hero_volt"]["level"]), 1, "24 XP is below the 60 XP threshold")
+	assert_eq(float(state.agents["hero_volt"]["xp"]), 8.0, "task XP comes from pack data")
+	assert_eq(int(state.agents["hero_volt"]["level"]), 1, "8 XP is far below the 120 XP threshold")
 
 
 func test_long_absence_is_capped_and_settles_once() -> void:
@@ -86,7 +86,7 @@ func test_long_absence_is_capped_and_settles_once() -> void:
 		pack.max_offline_seconds,
 		"settlement stops at the pack's offline allowance",
 	)
-	assert_eq(state.resource("credits"), 268.0, "the finished task pays once, not repeatedly")
+	assert_eq(state.resource("credits"), 68.0, "the finished task pays once, not repeatedly")
 
 
 func test_deploy_names_the_blocking_reason() -> void:
@@ -105,16 +105,19 @@ func test_deploy_names_the_blocking_reason() -> void:
 func test_training_spends_resources_and_levels_up() -> void:
 	var pack := _pack()
 	var state := _state(pack, 1000)
+	state.resources["credits"] = 200.0
 	var rating_before := AgentRules.rating(state.agents["hero_volt"])
 
 	var first := Simulation.train_agent(state, pack, "hero_volt")
-	assert_true(first.get("ok", false), "training succeeds with starting funds")
+	assert_true(first.get("ok", false), "training succeeds with funds")
 	assert_eq(int(first["cost"]), 25, "the first session costs the base price")
-	assert_eq(state.resource("credits"), 225.0, "the cost is deducted")
-	assert_eq(int(first["level_after"]), 1, "30 XP does not reach the 60 XP threshold")
+	assert_eq(state.resource("credits"), 175.0, "the cost is deducted")
+	assert_eq(int(first["level_after"]), 1, "40 XP does not reach the 120 XP threshold")
 
-	var second := Simulation.train_agent(state, pack, "hero_volt")
-	assert_eq(int(state.agents["hero_volt"]["level"]), 2, "60 XP reaches level 2")
+	Simulation.train_agent(state, pack, "hero_volt")
+	var third := Simulation.train_agent(state, pack, "hero_volt")
+	assert_eq(int(third["level_before"]), 1, "the third session is still level 1")
+	assert_eq(int(state.agents["hero_volt"]["level"]), 2, "120 XP reaches level 2")
 	assert_eq(int(state.agents["hero_volt"]["xp"]), 0, "XP carries over exactly")
 	assert_eq(
 		int(state.agents["hero_volt"]["attributes"]["speed"]),
@@ -127,7 +130,7 @@ func test_training_spends_resources_and_levels_up() -> void:
 	)
 	assert_eq(
 		int(Simulation.training_cost(state, pack, "hero_volt")),
-		38,
+		35,
 		"the next session costs more than the first",
 	)
 

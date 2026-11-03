@@ -32,9 +32,9 @@ func test_pack_declares_the_locked_mvp_shell() -> void:
 	assert_eq(pack.declared_resources(), ["credits", "intel"], "declared resources match the spec")
 	assert_eq(pack.navigation.size(), 5, "five primary tabs are declared")
 	assert_eq(pack.roles.size(), 5, "five hero classes are declared")
-	assert_eq(pack.missions.size(), 4, "the M1 task ladder has four steps")
+	assert_eq(pack.missions.size(), 6, "the task ladder has six steps")
 	assert_true(pack.missions.has("s_alley"), "the starter task exists")
-	assert_true(pack.missions.has("s_rooftop"), "the highest-gated task exists")
+	assert_true(pack.missions.has("s_siege"), "the highest-gated task exists")
 	assert_true(pack.starter_agents.has("hero_volt"), "the starter hero comes from pack data")
 	assert_eq(pack.max_offline_seconds, 28800.0, "the offline allowance is eight hours")
 	assert_eq(pack.label("roles.striker"), "Striker", "labels resolve through locale")
@@ -43,8 +43,8 @@ func test_pack_declares_the_locked_mvp_shell() -> void:
 
 func test_pack_carries_the_tuning_the_loop_needs() -> void:
 	var pack: GamePack = GamePackLoader.load_pack("hero_hq")["pack"]
-	assert_eq(float(pack.leveling.get("xp_base", 0)), 60.0, "the XP curve is pack data")
-	assert_eq(float(pack.leveling.get("xp_per_level", 0)), 40.0, "the XP curve grows with level")
+	assert_eq(float(pack.leveling.get("xp_base", 0)), 120.0, "the XP curve is pack data")
+	assert_eq(float(pack.leveling.get("xp_per_level", 0)), 80.0, "the XP curve grows with level")
 	assert_eq(str(pack.training.get("resource_id", "")), "credits", "training spends a declared resource")
 	assert_true(float(pack.training.get("xp_per_session", 0)) > 0.0, "training grants XP")
 	assert_eq(pack.roster_capacity, 12, "roster capacity is pack data")
@@ -68,7 +68,7 @@ func test_state_creation_uses_pack_content_only() -> void:
 	var pack: GamePack = GamePackLoader.load_pack("hero_hq")["pack"]
 	var state := Simulation.new_state(pack, 1, 1700000000)
 	assert_eq(state.game_id, "hero_hq", "state is stamped with the pack id")
-	assert_eq(state.resource("credits"), 250.0, "starter credits come from pack data")
+	assert_eq(state.resource("credits"), 50.0, "starter credits come from pack data")
 	assert_eq(state.resource("intel"), 0.0, "starter intel comes from pack data")
 	var volt: Dictionary = state.agents["hero_volt"]
 	assert_eq(str(volt["role_id"]), "striker", "the starter hero's role is data-driven")
