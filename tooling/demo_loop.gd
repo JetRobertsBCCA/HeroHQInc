@@ -1,13 +1,19 @@
 extends SceneTree
-## Headless walkthrough of the M1 loop, used as a demo and a smoke check.
+## Scripted walkthrough of the M1 loop on a manual clock.
 ##
 ##   godot --headless --path . -s res://tooling/demo_loop.gd
 ##
-## Runs on a manual clock against an in-memory state, so it never touches the
-## player's save and finishes in milliseconds.
+## Runs the greedy policy a first-time player would: train when it is affordable,
+## otherwise take the best-paying task on offer. Prints each completion so the
+## curve can be seen without a display. Never touches the player's save.
 
 const PACK_ID := "hero_hq"
-const START_UTC := 1_700_000_000
+const RUN_SECONDS := 900
+
+var _pack: GamePack
+var _state: GameState
+var _t: int = 0
+var _seen_level: int = 1
 
 
 func _initialize() -> void:
@@ -16,103 +22,154 @@ func _initialize() -> void:
 		print("FAIL pack did not load: %s" % str(loaded["errors"]))
 		quit(1)
 		return
-	var pack: GamePack = loaded["pack"]
-	var clock := Clock.Manual.new(START_UTC)
-	var state := Simulation.new_state(pack, 1, clock.now_utc())
-
-	print("%s — content v%d" % [pack.title(), pack.content_version])
-	print("offline allowance: %d s" % int(pack.max_offline_seconds))
-	_report(pack, state, clock)
-
-	print("\n[deploy] %s" % pack.label("tasks.s_alley"))
-	var deployed := Simulation.deploy(state, pack, "s_alley", clock.now_utc())
-	if not deployed.get("ok", false):
-		print("FAIL deploy refused: %s" % str(deployed))
-		quit(1)
-		return
-	print("  assignment %s ends at +%d s" % [
-		str(deployed["assignment_id"]),
-		int(deployed["ends_utc"]) - clock.now_utc(),
+	_pack = loaded["pack"]
+	_state = Simulation.new_state(_pack, 1, 0)
+	print("%s — content v%d, offline allowance %d s" % [
+		_pack.title(), _pack.content_version, int(_pack.max_offline_seconds),
 	])
-	_report(pack, state, clock)
+	print("start: %s %s, rating %d at level %d" % [
+		TextFormat.amount(_state.resource("credits")),
+		_pack.label("resources.credits"),
+		_current_rating(),
+		_current_level(),
+	])
+	print("")
 
-	for step in [10, 10]:
-		clock.advance(step)
-		var outcome := Simulation.simulate_delta(state, float(step), pack)
-		state = outcome["state"]
-		print("\n[+%ds] %s" % [step, _describe(pack, outcome["events"])])
-		_report(pack, state, clock)
-
-	print("\n[train] twice")
-	for index in 2:
-		var trained := Simulation.train_agent(state, pack, "hero_volt")
-		if not trained.get("ok", false):
-			print("FAIL training refused: %s" % str(trained))
+	while _t < RUN_SECONDS:
+		_train_when_affordable()
+		var task_id := _best_task()
+		if task_id.is_empty():
+			print("nothing deployable at %s" % _clock())
+			break
+		var deployed := Simulation.deploy(_state, _pack, task_id, _t)
+		if not deployed.get("ok", false):
+			print("FAIL deploy %s refused: %s" % [task_id, str(deployed.get("code", ""))])
 			quit(1)
 			return
-		print("  session %d costs %d, level %d -> %d" % [
-			index + 1,
-			int(trained["cost"]),
-			int(trained["level_before"]),
-			int(trained["level_after"]),
+		var ends := int(deployed["ends_utc"])
+		var delta := maxi(ends - _t, 1)
+		var outcome := Simulation.simulate_delta(_state, float(delta), _pack)
+		_state = outcome["state"]
+		_t = ends
+		print("%s  %-16s  %s" % [
+			_clock(),
+			_pack.label(str(_pack.task(task_id).get("name_key", "")), task_id),
+			_status_line(),
 		])
-	_report(pack, state, clock)
+		_check_level()
 
-	print("\n[deploy] %s" % pack.label("tasks.s_rooftop"))
-	var harder := Simulation.deploy(state, pack, "s_rooftop", clock.now_utc())
-	print("  %s" % ("accepted" if harder.get("ok", false) else "refused: %s" % str(harder.get("code", ""))))
-	if harder.get("ok", false):
-		clock.advance(150)
-		var finished := Simulation.simulate_delta(state, 150.0, pack)
-		state = finished["state"]
-		print("  [+150s] %s" % _describe(pack, finished["events"]))
-	_report(pack, state, clock)
-
-	print("\nOK loop complete")
+	print("")
+	print("%s  final: %s" % [_clock(), _status_line()])
+	print("tasks completed: %d, credits earned: %s" % [
+		_state.tasks_completed(),
+		TextFormat.amount(_state.earned_total("credits")),
+	])
+	print("OK loop complete")
 	quit(0)
 
 
-func _describe(pack: GamePack, events: Array) -> String:
-	if events.is_empty():
-		return "nothing finished yet"
-	var parts: Array[String] = []
-	for event in events:
-		if not (event is Dictionary):
+func _train_when_affordable() -> void:
+	var resource_id := str(_pack.training.get("resource_id", ""))
+	var guard := 0
+	while guard < 500:
+		guard += 1
+		var cost := Simulation.training_cost(_state, _pack, _agent_id())
+		if cost < 0 or _state.resource(resource_id) + 0.0001 < float(cost):
+			return
+		var result := Simulation.train_agent(_state, _pack, _agent_id())
+		if not result.get("ok", false):
+			return
+		_check_level()
+
+
+func _check_level() -> void:
+	var level := _current_level()
+	while _seen_level < level:
+		_seen_level += 1
+		print("%s  ** level %d (rating %d) — %s unlocked up to gate %d" % [
+			_clock(),
+			_seen_level,
+			_current_rating(),
+			_unlocked_names(),
+			_best_gate(),
+		])
+
+
+func _unlocked_names() -> String:
+	var names: Array[String] = []
+	for task_id in _pack.task_ids():
+		if _current_rating() + 0.0001 >= float(_pack.task(str(task_id)).get("minimum_rating", 0)):
+			names.append(_pack.label(str(_pack.task(str(task_id)).get("name_key", "")), str(task_id)))
+	return ", ".join(names)
+
+
+func _best_gate() -> int:
+	var best := 0
+	for task_id in _pack.task_ids():
+		if _current_rating() + 0.0001 >= float(_pack.task(str(task_id)).get("minimum_rating", 0)):
+			best = maxi(best, int(_pack.task(str(task_id)).get("minimum_rating", 0)))
+	return best
+
+
+func _best_task() -> String:
+	var best := ""
+	var best_income := 0.0
+	for task_id in _pack.task_ids():
+		var task := _pack.task(str(task_id))
+		if _current_rating() + 0.0001 < float(task.get("minimum_rating", 0)):
 			continue
-		var entry: Dictionary = event
-		if str(entry.get("type", "")) == "task_completed":
-			parts.append("%s complete %s" % [
-				pack.label(str(pack.task(str(entry.get("task_id", ""))).get("name_key", ""))),
-				TextFormat.rewards(pack, entry.get("rewards", {})),
-			])
-		elif str(entry.get("type", "")) == "level_up":
-			parts.append("%s reached level %d" % [
-				pack.agent_name(str(entry.get("agent_id", "")), {}),
-				int(entry.get("level", 1)),
-			])
-	return ", ".join(parts)
+		var income := _income_per_minute(str(task_id))
+		if income > best_income:
+			best_income = income
+			best = str(task_id)
+	return best
 
 
-func _report(pack: GamePack, state: GameState, clock: Clock.Manual) -> void:
-	var balances: Array[String] = []
-	for resource_id in pack.declared_resources():
-		balances.append("%s %s" % [
-			TextFormat.amount(state.resource(str(resource_id))),
-			pack.label("resources.%s" % str(resource_id)),
-		])
-	var agents: Array[String] = []
-	for agent_id in state.agents.keys():
-		var agent: Dictionary = state.agents[agent_id]
-		agents.append("%s Lv%d rating %d (%s, xp %s)" % [
-			pack.agent_name(str(agent_id), agent),
-			int(agent.get("level", 1)),
-			AgentRules.rating(agent),
-			str(agent.get("activity", "available")),
-			TextFormat.amount(float(agent.get("xp", 0))),
-		])
-	print("  t+%d  %s  |  %s  |  tasks done %d" % [
-		clock.now_utc() - START_UTC,
-		", ".join(balances),
-		"; ".join(agents),
-		state.tasks_completed(),
-	])
+func _income_per_minute(task_id: String) -> float:
+	if task_id.is_empty():
+		return 0.0
+	var task := _pack.task(task_id)
+	var seconds := maxf(float(task.get("base_seconds", 1)), 1.0)
+	var rewards: Variant = task.get("rewards", null)
+	var total := 0.0
+	if rewards is Dictionary:
+		for raw_id in (rewards as Dictionary).keys():
+			total += float((rewards as Dictionary)[raw_id])
+	return total * 60.0 / seconds
+
+
+func _status_line() -> String:
+	return "L%d rating %3d  %4s %s  %3s %s" % [
+		_current_level(),
+		_current_rating(),
+		TextFormat.amount(_state.resource("credits")),
+		_pack.label("resources.credits"),
+		TextFormat.amount(_state.resource("intel")),
+		_pack.label("resources.intel"),
+	]
+
+
+func _agent_id() -> String:
+	var ids: Array = _state.agents.keys()
+	if ids.is_empty():
+		return ""
+	ids.sort()
+	return str(ids[0])
+
+
+func _current_rating() -> int:
+	var agent: Variant = _state.agents.get(_agent_id(), null)
+	if agent is Dictionary:
+		return AgentRules.rating(agent)
+	return 0
+
+
+func _current_level() -> int:
+	var agent: Variant = _state.agents.get(_agent_id(), null)
+	if agent is Dictionary:
+		return int((agent as Dictionary).get("level", 1))
+	return 1
+
+
+func _clock() -> String:
+	return TextFormat.duration(float(_t))

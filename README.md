@@ -26,6 +26,9 @@ godot --headless --path . -s res://tooling/validate_packs.gd
 
 # watch the whole loop play out, no display needed
 godot --headless --path . -s res://tooling/demo_loop.gd
+
+# measure the progression curve a greedy player actually experiences
+godot --headless --path . -s res://tooling/balance_report.gd
 ```
 
 Downloads for the pinned engine: <https://godotengine.org/download/linux/>.
@@ -33,23 +36,39 @@ No Android SDK, ad SDK or billing credentials are needed for anything above.
 
 ## Play the loop
 
-The M1 loop is playable from a fresh save in about four minutes:
+The M1 loop is playable from a fresh save, and the curve is tuned rather than
+improvised. Volt starts at **rating 70** — `(power 5 + speed 5 + skill 4) × 5` —
+with 50 Credits, which is enough for one training session and no more.
 
-1. **Missions** lists every task the pack declares. Each card shows stage,
-   category, duration and rating gate, plus what it pays. `Deploy` is disabled
-   with the blocking reason on the card (rating too low, no free hero).
-2. Volt starts at **rating 70** — `(power 5 + speed 5 + skill 4) × 5`. Alley
-   Patrol (20 s, 18 Credits, 24 XP) clears its gate of 60; Break-In Response
-   (45 s, 70) does too; Drone Swarm (80) and Rooftop Pursuit (90) do not.
-3. A deployed card moves to **Active operations** with a live countdown. When it
+1. **Missions** lists six tasks. Each card shows stage, category, duration and
+   rating gate, plus what it pays. `Deploy` is disabled with the blocking reason
+   printed on the card (rating too low, no free hero).
+2. The ladder is paced so a new tier opens roughly every couple of minutes, and
+   each tier is worth about **1.5× the credits per minute** of the one before it:
+
+   | Task | Gate | Time | Pays | Rate |
+   |---|---|---|---|---|
+   | Alley Patrol | 60 | 20 s | 18 Credits | 54/min |
+   | Break-In Response | 80 | 30 s | 45 Credits | 90/min |
+   | Drone Swarm | 100 | 45 s | 95 Credits + 1 Intel | 128/min |
+   | Rooftop Pursuit | 120 | 60 s | 190 Credits + 2 Intel | 192/min |
+   | Convoy Ambush | 140 | 90 s | 430 Credits + 4 Intel | 289/min |
+   | Citywide Siege | 160 | 120 s | 900 Credits + 8 Intel | 454/min |
+
+3. **Heroes** shows rating, level, XP bar and `Train` (25 Credits for +40 XP,
+   cost ×1.4 per level). Volt gains +20 rating per level, so each level unlocks
+   exactly one new tier — 70 at level 1, 90 at level 2, and so on.
+4. A deployed card moves to **Active operations** with a live countdown. When it
    reaches zero the task pays out, the hero is freed and the result is logged on
    the HQ tab.
-4. **Heroes** shows rating, level, XP bar and `Train` (25 Credits for +30 XP,
-   cost ×1.5 per level). At 60 XP Volt reaches level 2, and the Striker growth
-   curve (+1 power, +2 speed, +1 skill) takes the rating to 90 — which unlocks
-   Rooftop Pursuit.
 5. Close the app mid-task and reopen it later: the same settlement call finishes
    the task on launch, capped at the pack's 8-hour allowance.
+
+Measured with `tooling/balance_report.gd`, a greedy first session reaches the six
+tiers at roughly **0:00, 0:40, 2:10, 5:10, 8:10 and 11:10**, and levels then keep
+slowing (15:10, 21:10, 29:10, 41:10, 59:10). That shape is deliberate: quick first
+win, a visible power spike per tier, and a decaying cadence after the content runs
+out — see the balance note in [docs/CHANGELOG.md](docs/CHANGELOG.md).
 
 Everything above is driven by pack data (`games/hero_hq/data/*.json`), not by
 code in `framework/`.
@@ -73,6 +92,7 @@ games/hero_hq/             HERO//HQ content pack — game #1
 tests/                     headless runner, test_case harness, suites
 tooling/validate_packs.gd  CLI pack validator (CI gate)
 tooling/demo_loop.gd       headless walkthrough of the loop
+tooling/balance_report.gd  greedy pacing simulation + curve report
 ```
 
 **Dependency direction:** `games/* -> framework/*`. The framework never imports a
