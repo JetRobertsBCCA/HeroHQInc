@@ -19,11 +19,14 @@ var resources: Dictionary = {}
 var agents: Dictionary = {}
 ## squad_id -> squad record dictionary
 var squads: Dictionary = {}
-## assignment_id -> assignment record dictionary
+## assignment_id -> {task_id, agent_ids, started_utc, ends_utc}
 var assignments: Dictionary = {}
 ## upgrade_id -> purchased rank
 var upgrades: Dictionary = {}
 var automation_rules: Array = []
+## Lifetime totals used by progression requirements:
+## {tasks_completed: int, earned: {resource_id: float}}
+var stats: Dictionary = {}
 ## module_id -> { ... } state owned by optional game-specific rule modules
 var extensions: Dictionary = {}
 
@@ -40,6 +43,7 @@ func to_dict() -> Dictionary:
 		"assignments": assignments.duplicate(true),
 		"upgrades": upgrades.duplicate(true),
 		"automation_rules": automation_rules.duplicate(true),
+		"stats": stats.duplicate(true),
 		"extensions": extensions.duplicate(true),
 	}
 
@@ -56,12 +60,24 @@ static func from_dict(source: Dictionary) -> GameState:
 	state.assignments = _as_dictionary(source.get("assignments"))
 	state.upgrades = _as_dictionary(source.get("upgrades"))
 	state.automation_rules = _as_array(source.get("automation_rules"))
+	state.stats = _as_dictionary(source.get("stats"))
 	state.extensions = _as_dictionary(source.get("extensions"))
 	return state
 
 
 func resource(resource_id: String) -> float:
 	return float(resources.get(resource_id, 0))
+
+
+func tasks_completed() -> int:
+	return int(stats.get("tasks_completed", 0))
+
+
+func earned_total(resource_id: String) -> float:
+	var earned: Variant = stats.get("earned", {})
+	if earned is Dictionary:
+		return float((earned as Dictionary).get(resource_id, 0))
+	return 0.0
 
 
 static func _as_dictionary(value: Variant) -> Dictionary:
