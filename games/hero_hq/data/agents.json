@@ -1,5 +1,16 @@
 {
 	"roster_capacity": 12,
+	"leveling": {
+		"xp_base": 60,
+		"xp_per_level": 40,
+		"attribute_gain_per_level": 1
+	},
+	"training": {
+		"resource_id": "credits",
+		"base_cost": 25,
+		"cost_growth": 1.5,
+		"xp_per_session": 30
+	},
 	"starting_agents": [
 		{
 			"id": "hero_volt",

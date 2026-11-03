@@ -9,6 +9,46 @@
 		"required_agent_count": 1,
 		"minimum_rating": 60,
 		"required_role_ids": [],
-		"rewards": {"credits": 18}
+		"rewards": {"credits": 18},
+		"xp": 24
+	},
+	{
+		"id": "s_breakin",
+		"name_key": "tasks.s_breakin",
+		"kind": "solo",
+		"stage_id": "street",
+		"category_id": "crime",
+		"base_seconds": 45,
+		"required_agent_count": 1,
+		"minimum_rating": 70,
+		"required_role_ids": [],
+		"rewards": {"credits": 45},
+		"xp": 40
+	},
+	{
+		"id": "s_drone",
+		"name_key": "tasks.s_drone",
+		"kind": "solo",
+		"stage_id": "city",
+		"category_id": "technology",
+		"base_seconds": 90,
+		"required_agent_count": 1,
+		"minimum_rating": 80,
+		"required_role_ids": [],
+		"rewards": {"credits": 90, "intel": 2},
+		"xp": 60
+	},
+	{
+		"id": "s_rooftop",
+		"name_key": "tasks.s_rooftop",
+		"kind": "solo",
+		"stage_id": "city",
+		"category_id": "crime",
+		"base_seconds": 150,
+		"required_agent_count": 1,
+		"minimum_rating": 90,
+		"required_role_ids": [],
+		"rewards": {"credits": 210, "intel": 4},
+		"xp": 110
 	}
 ]
