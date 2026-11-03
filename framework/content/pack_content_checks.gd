@@ -85,3 +85,88 @@ static func check_agents(
 						"Agent '%s' attribute '%s' must be finite and >= 0." % [id, str(attribute)],
 					))
 	return errors
+
+
+static func check_tasks(
+	tasks: Array,
+	role_ids: Dictionary,
+	locale: Dictionary,
+	progression: Dictionary,
+	manifest: Dictionary
+) -> Array[Dictionary]:
+	var errors: Array[Dictionary] = []
+	if tasks.is_empty():
+		errors.append(PackValidator.error("invalid_value", "missions", "A pack must define at least one task."))
+		return errors
+	var stage_ids := PackValidator.id_set(progression.get("stages", []))
+	var category_ids := PackValidator.id_set(progression.get("categories", []))
+	var resource_ids := PackValidator.string_set(manifest.get("resources", []))
+	var seen: Dictionary = {}
+	for record in tasks:
+		if not (record is Dictionary):
+			errors.append(PackValidator.error("invalid_value", "missions", "Task entries must be objects."))
+			continue
+		var task: Dictionary = record
+		var id := str(task.get("id", ""))
+		if not PackValidator.matches(id, PackValidator.ID_PATTERN):
+			errors.append(PackValidator.error("invalid_id", "missions", "Task id '%s' is invalid." % id))
+		if seen.has(id):
+			errors.append(PackValidator.error("duplicate_id", "missions", "Duplicate task id '%s'." % id))
+		seen[id] = true
+		errors.append_array(PackValidator.check_locale_key(task, "missions", locale, "task %s" % id))
+		if not PackValidator.SUPPORTED_TASK_KINDS.has(str(task.get("kind", ""))):
+			errors.append(PackValidator.error(
+				"invalid_value", "missions",
+				"Task '%s' kind '%s' is not one of %s." % [
+					id, str(task.get("kind", "")), str(PackValidator.SUPPORTED_TASK_KINDS),
+				],
+			))
+		var stage_id := str(task.get("stage_id", ""))
+		if not stage_ids.has(stage_id):
+			errors.append(PackValidator.error(
+				"dangling_reference", "missions",
+				"Task '%s' references unknown stage '%s'." % [id, stage_id],
+			))
+		var category_id := str(task.get("category_id", ""))
+		if not category_ids.has(category_id):
+			errors.append(PackValidator.error(
+				"dangling_reference", "missions",
+				"Task '%s' references unknown category '%s'." % [id, category_id],
+			))
+		var base_seconds := float(task.get("base_seconds", 0))
+		if not is_finite(base_seconds) or base_seconds < 1.0:
+			errors.append(PackValidator.error("invalid_value", "missions", "Task '%s' base_seconds must be >= 1." % id))
+		if int(task.get("required_agent_count", 0)) < 1:
+			errors.append(PackValidator.error(
+				"invalid_value", "missions", "Task '%s' required_agent_count must be >= 1." % id,
+			))
+		var minimum_rating := float(task.get("minimum_rating", 0))
+		if not is_finite(minimum_rating) or minimum_rating < 0.0:
+			errors.append(PackValidator.error("invalid_value", "missions", "Task '%s' minimum_rating must be >= 0." % id))
+		var required_roles: Variant = task.get("required_role_ids", [])
+		if not (required_roles is Array):
+			errors.append(PackValidator.error("invalid_value", "missions", "Task '%s' required_role_ids must be an array." % id))
+		else:
+			for role_id in required_roles:
+				if not role_ids.has(str(role_id)):
+					errors.append(PackValidator.error(
+						"dangling_reference", "missions",
+						"Task '%s' requires unknown role '%s'." % [id, str(role_id)],
+					))
+		var rewards: Variant = task.get("rewards", null)
+		if not (rewards is Dictionary) or (rewards as Dictionary).is_empty():
+			errors.append(PackValidator.error("invalid_value", "missions", "Task '%s' must declare rewards." % id))
+		else:
+			for resource_id in (rewards as Dictionary).keys():
+				if not resource_ids.has(str(resource_id)):
+					errors.append(PackValidator.error(
+						"dangling_reference", "missions",
+						"Task '%s' rewards undeclared resource '%s'." % [id, str(resource_id)],
+					))
+				var amount := float((rewards as Dictionary)[resource_id])
+				if not is_finite(amount) or amount < 0.0:
+					errors.append(PackValidator.error(
+						"invalid_value", "missions",
+						"Task '%s' reward '%s' must be finite and >= 0." % [id, str(resource_id)],
+					))
+	return errors
