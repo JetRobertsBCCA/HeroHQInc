@@ -87,5 +87,22 @@
 	"ui.blocked_prestige_unavailable": "Rebirth is not part of this pack",
 	"ui.blocked_prestige_earnings_short": "Earn more Credits this run to unlock rebirth",
 	"ui.blocked_prestige_level_short": "Reach a higher level to unlock rebirth",
-	"ui.blocked_prestige_no_pending": "No new chips yet — keep earning"
+	"ui.blocked_prestige_no_pending": "No new chips yet — keep earning",
+
+	"research.title": "Research",
+	"research.subtitle": "Permanent upgrades bought with Intel. They survive every rebirth.",
+	"research.reward": "Operations payout",
+	"research.training": "Training cost",
+	"research.automation": "Auto-repeat operations",
+	"research.reward_effect": "+6% task payouts per rank",
+	"research.training_effect": "-5% training cost per rank",
+	"research.automation_effect": "Repeats your last operation automatically",
+	"ui.research_buy": "Research",
+	"ui.research_maxed": "Fully researched",
+	"ui.research_rank": "Rank",
+	"ui.research_cost": "Cost",
+	"ui.research_done": "Research complete",
+	"ui.blocked_research_unavailable": "Research is not part of this pack",
+	"ui.blocked_research_unknown": "Unknown research",
+	"ui.blocked_research_max_rank": "Already fully researched"
 }
