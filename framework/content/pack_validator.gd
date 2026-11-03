@@ -92,7 +92,7 @@ static func validate_pack_root(root: String) -> Array[Dictionary]:
 	var role_result := PackContentChecks.check_roles(roles, locale)
 	errors.append_array(role_result["errors"])
 	var role_ids: Dictionary = role_result["ids"]
-	errors.append_array(PackContentChecks.check_agents(agents_document, role_ids, locale))
+	errors.append_array(PackContentChecks.check_agents(agents_document, role_ids, locale, manifest))
 	errors.append_array(
 		PackContentChecks.check_tasks(tasks, role_ids, locale, progression, manifest)
 	)
