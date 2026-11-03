@@ -28,6 +28,38 @@
 		"bonus_per_chip": 0.05,
 		"min_level": 7
 	},
+	"research": {
+		"resource_id": "intel",
+		"branches": [
+			{
+				"id": "ops_reward",
+				"label_key": "research.reward",
+				"max_rank": 5,
+				"base_cost": 15,
+				"cost_growth": 1.6,
+				"effect": "reward_multiplier",
+				"per_rank": 0.06
+			},
+			{
+				"id": "ops_training",
+				"label_key": "research.training",
+				"max_rank": 5,
+				"base_cost": 20,
+				"cost_growth": 1.6,
+				"effect": "training_discount",
+				"per_rank": 0.05
+			},
+			{
+				"id": "ops_automation",
+				"label_key": "research.automation",
+				"max_rank": 1,
+				"base_cost": 30,
+				"cost_growth": 1.0,
+				"effect": "auto_repeat",
+				"per_rank": 1
+			}
+		]
+	},
 	"max_offline_seconds": 28800,
 	"roster_capacity": 12,
 	"navigation": [

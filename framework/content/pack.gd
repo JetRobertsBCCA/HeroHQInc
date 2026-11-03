@@ -30,6 +30,9 @@ var training: Dictionary = {}
 ## Rebirth economy: {resource_id, threshold_amount, scale, exponent,
 ## gain_factor, bonus_per_chip, min_level}. Empty means no rebirth.
 var prestige: Dictionary = {}
+## Permanent research: {resource_id, branches: [{id, label_key, max_rank,
+## base_cost, cost_growth, effect, per_rank}]}. Empty means no research.
+var research: Dictionary = {}
 ## [{id, label_key}] bottom navigation, in display order.
 var navigation: Array = []
 

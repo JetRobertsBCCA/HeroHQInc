@@ -67,6 +67,7 @@ static func load_pack_from_root(root: String, expected_game_id: String = "") -> 
 	pack.leveling = _typed_dictionary(agents_document.get("leveling"))
 	pack.training = _typed_dictionary(agents_document.get("training"))
 	pack.prestige = _typed_dictionary(manifest.get("prestige"))
+	pack.research = _typed_dictionary(manifest.get("research"))
 	pack.roster_capacity = int(manifest.get("roster_capacity", agents_document.get("roster_capacity", 0)))
 	return {"pack": pack, "errors": []}
 
