@@ -1,20 +1,34 @@
 extends Control
 ## HERO//HQ composition root (game layer).
 ##
-## This is the only place allowed to name the title: it loads the hero_hq pack,
-## restores or creates the state, settles the time the player was away, and
-## builds the HQ screen. Shared behaviour lives in `framework/`.
+## The only place allowed to name the title: it loads the hero_hq pack, restores
+## or creates the state, settles the time the player was away, and wires the HQ,
+## roster and task screens. Shared behaviour lives in `framework/`.
+##
+## One timer drives everything. Each tick settles elapsed time through the same
+## `Simulation.simulate_delta` used at launch, so a task finishes the same way
+## whether the app was open or closed.
 
 const PACK_ID := "hero_hq"
 const STARTING_SEED := 1
 const HOME_TAB := "hq"
+const HEROES_TAB := "heroes"
+const MISSIONS_TAB := "missions"
 const STARTER_ROLE_ORDER := ["vanguard", "striker", "tech", "support", "mystic"]
+const TICK_SECONDS := 1.0
+const SAVE_EVERY_TICKS := 10
+const EVENT_LOG_LIMIT := 4
 
 var _pack: GamePack
 var _state: GameState
 var _shell: ScreenShell
 var _clock: Clock = Clock.new()
+var _timer: Timer
 var _settled_seconds: float = 0.0
+var _events_log: Array[String] = []
+var _task_board: TaskBoard
+var _roster: RosterScreen
+var _tick_count: int = 0
 
 
 func _ready() -> void:
@@ -28,6 +42,7 @@ func _ready() -> void:
 	_state = _restore_or_create_state()
 	_settle_absence()
 	_build_shell()
+	_start_timer()
 
 
 func _exit_tree() -> void:
@@ -41,17 +56,22 @@ func _restore_or_create_state() -> GameState:
 	if existing is GameState:
 		var state: GameState = existing
 		state.pack_content_version = _pack.content_version
+		# A save from an incomplete content build can restore without a roster.
+		# Without an agent no task can start, so rebuild it from pack data.
+		if state.agents.is_empty():
+			Simulation.seed_missing_starter_agents(state, _pack)
 		return state
 	return Simulation.new_state(_pack, STARTING_SEED, _clock.now_utc())
 
 
-## Advances the simulation by the time the app was closed. Offline and online
-## play share this one code path, so there is a single settlement rule.
+## Advances the simulation by the time the app was closed, and logs whatever
+## finished while the player was away.
 func _settle_absence() -> void:
 	var elapsed := float(_clock.now_utc() - _state.last_settled_utc)
 	var outcome := Simulation.simulate_delta(_state, elapsed, _pack)
 	_state = outcome["state"]
 	_settled_seconds = float(outcome["applied_seconds"])
+	_record_events(outcome.get("events", []))
 	SaveService.save_state(_state)
 
 
@@ -65,11 +85,94 @@ func _build_shell() -> void:
 	_shell.select_tab(HOME_TAB)
 
 
+func _start_timer() -> void:
+	_timer = Timer.new()
+	_timer.name = "Tick"
+	_timer.wait_time = TICK_SECONDS
+	_timer.autostart = true
+	_timer.timeout.connect(_on_tick)
+	add_child(_timer)
+
+
+func _on_tick() -> void:
+	var now := _clock.now_utc()
+	var elapsed := float(now - _state.last_settled_utc)
+	if elapsed >= 1.0:
+		var outcome := Simulation.simulate_delta(_state, elapsed, _pack)
+		_state = outcome["state"]
+		var events: Array = outcome.get("events", [])
+		_tick_count += 1
+		if not events.is_empty():
+			_record_events(events)
+			SaveService.save_state(_state)
+			_refresh_content()
+		else:
+			_shell.refresh(_state)
+			if _tick_count % SAVE_EVERY_TICKS == 0:
+				SaveService.save_state(_state)
+	if _task_board != null and is_instance_valid(_task_board):
+		_task_board.tick(now)
+
+
 func _on_tab_selected(tab_id: String) -> void:
+	_task_board = null
+	_roster = null
 	if tab_id == HOME_TAB:
 		_shell.set_content(_build_hq_content())
 		return
+	if tab_id == MISSIONS_TAB:
+		_task_board = TaskBoard.new()
+		_task_board.name = "TaskBoard"
+		_task_board.deploy_requested.connect(_on_deploy_requested)
+		_task_board.refresh(_pack, _state, _clock.now_utc())
+		_shell.set_content(_task_board)
+		return
+	if tab_id == HEROES_TAB:
+		_roster = RosterScreen.new()
+		_roster.name = "RosterScreen"
+		_roster.train_requested.connect(_on_train_requested)
+		_roster.refresh(_pack, _state)
+		_shell.set_content(_roster)
+		return
 	_shell.set_content(_build_placeholder(tab_id))
+
+
+func _refresh_content() -> void:
+	_shell.refresh(_state)
+	_on_tab_selected(_shell.current_tab())
+
+
+func _on_deploy_requested(task_id: String) -> void:
+	var result := Simulation.deploy(_state, _pack, task_id, _clock.now_utc())
+	if not result.get("ok", false):
+		_log("%s: %s" % [
+			_pack.label("ui.deploy_failed", "Cannot deploy"),
+			_pack.label(
+				"ui.blocked_%s" % str(result.get("code", "")),
+				str(result.get("code", "")),
+			),
+		])
+		_refresh_content()
+		return
+	SaveService.save_state(_state)
+	_refresh_content()
+
+
+func _on_train_requested(agent_id: String) -> void:
+	var result := Simulation.train_agent(_state, _pack, agent_id)
+	if not result.get("ok", false):
+		_log("%s: %s" % [
+			_pack.label("ui.train", "Train"),
+			_pack.label(
+				"ui.blocked_%s" % str(result.get("code", "")),
+				str(result.get("code", "")),
+			),
+		])
+		_refresh_content()
+		return
+	_record_events(result.get("events", []))
+	SaveService.save_state(_state)
+	_refresh_content()
 
 
 func _build_hq_content() -> Control:
@@ -85,12 +188,15 @@ func _build_hq_content() -> Control:
 	column.add_child(_build_network_card())
 	column.add_child(_info_row(
 		_pack.label("ui.roster_active"),
-		"%d / %d" % [_state.agents.size(), int(_pack.manifest.get("roster_capacity", 0))]
+		"%d / %d" % [_state.agents.size(), _pack.roster_capacity]
 	))
 	var status_text := _pack.label("ui.idle_status")
-	if _settled_seconds > 0.0:
+	if _state.assignments.size() > 0:
+		status_text = "%s: %d" % [_pack.label("ui.active_operations"), _state.assignments.size()]
+	elif _settled_seconds > 0.0:
 		status_text = "%s (%s s)" % [_pack.label("ui.offline_settled"), str(int(_settled_seconds))]
 	column.add_child(_info_row(_pack.label("ui.status"), status_text))
+	column.add_child(_recent_events_panel())
 	return scroll
 
 
@@ -122,6 +228,36 @@ func _build_network_card() -> Control:
 		ThemeTokens.color(_pack, "border")
 	)
 	column.add_child(network)
+	return panel
+
+
+func _recent_events_panel() -> Control:
+	var panel := PanelContainer.new()
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 4)
+	panel.add_child(column)
+
+	var heading := Label.new()
+	heading.text = _pack.label("ui.recent_events")
+	heading.add_theme_font_size_override("font_size", 12)
+	heading.add_theme_color_override("font_color", ThemeTokens.color(_pack, "muted"))
+	column.add_child(heading)
+
+	if _events_log.is_empty():
+		var empty := Label.new()
+		empty.text = _pack.label("ui.no_events")
+		empty.add_theme_font_size_override("font_size", 12)
+		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		empty.add_theme_color_override("font_color", ThemeTokens.color(_pack, "muted"))
+		column.add_child(empty)
+		return panel
+
+	for line in _events_log:
+		var label := Label.new()
+		label.text = str(line)
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.add_theme_font_size_override("font_size", 12)
+		column.add_child(label)
 	return panel
 
 
@@ -162,6 +298,45 @@ func _build_placeholder(tab_id: String) -> Control:
 	note.add_theme_color_override("font_color", ThemeTokens.color(_pack, "muted"))
 	column.add_child(note)
 	return panel
+
+
+func _record_events(events: Array) -> void:
+	for event in events:
+		if not (event is Dictionary):
+			continue
+		var entry: Dictionary = event
+		var event_type := str(entry.get("type", ""))
+		if event_type == "task_completed":
+			_log(_task_completed_text(entry))
+		elif event_type == "level_up":
+			_log(_level_up_text(entry))
+
+
+func _task_completed_text(entry: Dictionary) -> String:
+	var task_id := str(entry.get("task_id", ""))
+	var task_name := _pack.label(str(_pack.task(task_id).get("name_key", "")), task_id)
+	var suffix := ""
+	var rewards: Variant = entry.get("rewards", null)
+	if rewards is Dictionary and not (rewards as Dictionary).is_empty():
+		suffix = "  %s" % TextFormat.rewards(_pack, rewards)
+	return "%s %s%s" % [task_name, _pack.label("ui.task_complete", "complete"), suffix]
+
+
+func _level_up_text(entry: Dictionary) -> String:
+	var agent_id := str(entry.get("agent_id", ""))
+	var record: Variant = _state.agents.get(agent_id, null)
+	var agent_name := _pack.agent_name(agent_id, record if record is Dictionary else {})
+	return "%s %s %d" % [
+		agent_name,
+		_pack.label("ui.level_up", "reached level"),
+		int(entry.get("level", 1)),
+	]
+
+
+func _log(line: String) -> void:
+	_events_log.push_front(line)
+	while _events_log.size() > EVENT_LOG_LIMIT:
+		_events_log.pop_back()
 
 
 func _build_error_view(errors: Array) -> void:
