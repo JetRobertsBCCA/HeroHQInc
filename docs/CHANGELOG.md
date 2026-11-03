@@ -3,6 +3,71 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.2 — Long-term curve and Command Rebirth (2026-11-03)
+
+Status: complete and measured. Content version stays 2 (additive `prestige` block).
+
+### What was wrong
+
+Content v2 runs out of ladder after ~11 minutes and then waits grow roughly 1.4×
+per level forever: 15, 21, 29, 41, 59 minutes, then hours. A first session is fine
+and a first week is not. The fix is the genre-standard one — a rebirth layer — but
+it has to be built so the meta-currency cannot outrun the cost curve.
+
+### Research used
+
+- Prestige payouts should be sub-linear in progress (square root for Realm Grinder,
+  cube root for Cookie Clicker): each doubling then costs roughly 4× (resp. 8×) the
+  earnings — Pecorella, *The Math of Idle Games, Part III*.
+  <https://www.gamedeveloper.com/design/the-math-of-idle-games-part-iii>
+- The first prestige must land inside the first sitting and waits should lengthen
+  as engagement decays — Guan, *Idle Game Design Principles*.
+  <https://ericguan.substack.com/p/idle-game-design-principles>
+- Resets should read as a soft chapter: the player keeps the permanent bank and
+  loses only what is meant to be rebuilt.
+  <https://dropletidle.com/pages/blog/guide-to-idle-game-prestige-mechanics/>
+
+### What changed
+
+- `framework/core/prestige.gd`: pack-driven rebirth math. Chips are a function of
+  **lifetime** earnings (`chips = floor(gain_factor · (lifetime/scale)^exponent)`)
+  and the multiplier is `1 + bonus_per_chip · chips`.
+- Chips are recomputed, not awarded per run. The first implementation banked on
+  reset, and the seven-day model showed the multiplier reaching **×6424** — a run that
+  earned more could be reset repeatedly to double-dip. Lifetime-derived chips made
+  the bank monotone and the same progress can never pay twice.
+- `Simulation._complete_assignment` multiplies every payout by the multiplier and
+  tracks run earnings; `Prestige.rebirth` clears resources, assignments, levels
+  and run earnings while keeping chips, rebirth count and lifetime totals, and
+  resets the settlement stamp so no time is paid twice.
+- `framework/ui/screens/prestige_screen.gd`: live chips, multiplier, lifetime
+  progress toward the next chip, and a two-step confirm so a tap cannot wipe a
+  run. Wired to the Upgrades tab.
+- Pack data: `prestige` block (`threshold_amount 4000`, `scale 1000`,
+  `exponent 0.45`, `gain_factor 2`, `bonus_per_chip 0.05`, `min_level 7`); content
+  checks validate the block when present, like `leveling` and `training`.
+- `tooling/long_run_report.gd`: seven days of the real simulation with a rebirth
+  policy; fails when any single level-up wait exceeds 30 minutes.
+- Docs: `docs/BALANCE.md` records the formulas, the curve and the sweep behind
+  `exponent 0.45`.
+- Tests: **64** (up from 54): payout formula, no-double-dip invariant, both gates,
+  reset contract, boosted payouts, save round-trip, panel arming behaviour.
+
+### Measured result (7-day model)
+
+205 rebirths, average run 49m 10s (17m 10s at the start, ~1h 05m by run 200),
+208 chips banked for **×11.40** on every payout, and a longest single wait of
+**14m 00s** — inside the 30-minute budget. `exponent 0.5` produced 459 resets at
+22 minutes each (a treadmill); `0.4` stretched the worst wait to 42 minutes.
+
+### Known limitations of this pass
+
+- Content is still six tasks. Rebirth deepens the existing ladder (level 15–16 by
+  day 7) but adds no new tiers; more tasks and squads are the next content axis.
+- Intel still has no sink, so it rides along as score rather than a resource.
+- The model's policy rebirths at the earliest worthwhile moment, which is a lower
+  bound on human run length; it measures waits, not enjoyment.
+
 ## M1.1 — Power-curve tuning (2026-11-03)
 
 Status: complete and measured. Content version bumped to 2.
