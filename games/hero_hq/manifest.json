@@ -61,7 +61,7 @@
 		]
 	},
 	"max_offline_seconds": 28800,
-	"roster_capacity": 12,
+	"roster_capacity": 240,
 	"navigation": [
 		{"id": "hq", "label_key": "tabs.hq"},
 		{"id": "heroes", "label_key": "tabs.heroes"},

@@ -1,5 +1,5 @@
 {
-	"roster_capacity": 12,
+	"roster_capacity": 240,
 	"leveling": {
 		"xp_base": 120,
 		"xp_per_level": 80,
@@ -22,12 +22,44 @@
 			"attributes": {"power": 5, "speed": 5, "skill": 4}
 		}
 	],
-	"generation": {
-		"candidate_count": 2,
+	"recruit_pool": {
+		"resource_id": "credits",
+		"named_count": 200,
+		"base_cost": 50,
+		"cost_growth": 1.03,
+		"filler_name_format": "Reserve Operative %d",
+		"given_names": [
+			"Ada", "Bo", "Cass", "Dara", "Eli",
+			"Faye", "Gus", "Hana", "Ivo", "Juno",
+			"Kai", "Lena", "Milo", "Nia", "Oren",
+			"Pia", "Quinn", "Rhea", "Sol", "Tess"
+		],
+		"call_signs": [
+			"Nightfall", "Ember", "Quarry", "Lumen", "Tide",
+			"Sable", "Vesper", "Drift", "Anvil", "Halo"
+		],
 		"tiers": [
-			{"id": "standard", "weight": 65},
-			{"id": "advanced", "weight": 27},
-			{"id": "elite", "weight": 8}
+			{
+				"id": "standard",
+				"weight": 65,
+				"cost_multiplier": 1.0,
+				"attribute_base": 4,
+				"attribute_spread": 2
+			},
+			{
+				"id": "advanced",
+				"weight": 27,
+				"cost_multiplier": 2.5,
+				"attribute_base": 5,
+				"attribute_spread": 2
+			},
+			{
+				"id": "elite",
+				"weight": 8,
+				"cost_multiplier": 6.0,
+				"attribute_base": 6,
+				"attribute_spread": 2
+			}
 		]
 	}
 }
