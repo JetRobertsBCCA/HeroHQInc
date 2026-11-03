@@ -1,5 +1,6 @@
 extends TestCase
-## Would fail if the shared framework ever absorbed title-specific content.
+## HERO//HQ pack contract. Also the reuse guard: fails if shared framework code
+## ever absorbs title-specific content.
 
 const FORBIDDEN_IN_FRAMEWORK: Array[String] = [
 	"hero",
@@ -31,12 +32,36 @@ func test_pack_declares_the_locked_mvp_shell() -> void:
 	assert_eq(pack.declared_resources(), ["credits", "intel"], "declared resources match the spec")
 	assert_eq(pack.navigation.size(), 5, "five primary tabs are declared")
 	assert_eq(pack.roles.size(), 5, "five hero classes are declared")
-	assert_eq(pack.missions.size(), 1, "M0 ships only the starter task")
+	assert_eq(pack.missions.size(), 4, "the M1 task ladder has four steps")
 	assert_true(pack.missions.has("s_alley"), "the starter task exists")
+	assert_true(pack.missions.has("s_rooftop"), "the highest-gated task exists")
 	assert_true(pack.starter_agents.has("hero_volt"), "the starter hero comes from pack data")
 	assert_eq(pack.max_offline_seconds, 28800.0, "the offline allowance is eight hours")
 	assert_eq(pack.label("roles.striker"), "Striker", "labels resolve through locale")
 	assert_eq(pack.label("missing.key"), "missing.key", "a missing label degrades to its key")
+
+
+func test_pack_carries_the_tuning_the_loop_needs() -> void:
+	var pack: GamePack = GamePackLoader.load_pack("hero_hq")["pack"]
+	assert_eq(float(pack.leveling.get("xp_base", 0)), 60.0, "the XP curve is pack data")
+	assert_eq(float(pack.leveling.get("xp_per_level", 0)), 40.0, "the XP curve grows with level")
+	assert_eq(str(pack.training.get("resource_id", "")), "credits", "training spends a declared resource")
+	assert_true(float(pack.training.get("xp_per_session", 0)) > 0.0, "training grants XP")
+	assert_eq(pack.roster_capacity, 12, "roster capacity is pack data")
+
+
+func test_every_task_pays_only_declared_resources() -> void:
+	var pack: GamePack = GamePackLoader.load_pack("hero_hq")["pack"]
+	var declared := PackValidator.string_set(pack.manifest.get("resources", []))
+	for task_id in pack.task_ids():
+		var rewards: Variant = pack.task(str(task_id)).get("rewards", null)
+		if not (rewards is Dictionary):
+			continue
+		for resource_id in (rewards as Dictionary).keys():
+			assert_true(
+				declared.has(str(resource_id)),
+				"task %s pays declared resource %s" % [str(task_id), str(resource_id)]
+			)
 
 
 func test_state_creation_uses_pack_content_only() -> void:
