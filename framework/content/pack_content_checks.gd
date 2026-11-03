@@ -141,6 +141,7 @@ static func check_rules(document: Dictionary, manifest: Dictionary) -> Array[Dic
 			errors.append(PackValidator.error(
 				"invalid_value", "agents", "training.xp_per_session must be >= 0.",
 			))
+	errors.append_array(PackRecruitChecks.check(document, manifest))
 	return errors
 
 
