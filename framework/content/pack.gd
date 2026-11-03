@@ -33,6 +33,9 @@ var prestige: Dictionary = {}
 ## Permanent research: {resource_id, branches: [{id, label_key, max_rank,
 ## base_cost, cost_growth, effect, per_rank}]}. Empty means no research.
 var research: Dictionary = {}
+## Recruit pool: {resource_id, named_count, base_cost, cost_growth, given_names,
+## call_signs, filler_name_format, tiers: [...]}. Empty means no recruitment.
+var recruit_pool: Dictionary = {}
 ## [{id, label_key}] bottom navigation, in display order.
 var navigation: Array = []
 
@@ -98,7 +101,12 @@ func category_label(category_id: String) -> String:
 
 
 ## Task names, stage/category labels and agent names all resolve through here.
+## Generated agents carry a literal `name` because their identity is data, not
+## a locale key; authored agents keep resolving through `name_key`.
 func agent_name(agent_id: String, agent: Dictionary) -> String:
+	var literal := str(agent.get("name", ""))
+	if not literal.is_empty():
+		return literal
 	return label(str(agent.get("name_key", "")), agent_id)
 
 
