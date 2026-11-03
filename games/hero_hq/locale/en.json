@@ -20,6 +20,8 @@
 	"tasks.s_breakin": "Break-In Response",
 	"tasks.s_drone": "Drone Swarm",
 	"tasks.s_rooftop": "Rooftop Pursuit",
+	"tasks.s_convoy": "Convoy Ambush",
+	"tasks.s_siege": "Citywide Siege",
 
 	"stages.street": "Street Level",
 	"stages.city": "Citywide Defense",

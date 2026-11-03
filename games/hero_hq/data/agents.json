@@ -1,15 +1,15 @@
 {
 	"roster_capacity": 12,
 	"leveling": {
-		"xp_base": 60,
-		"xp_per_level": 40,
+		"xp_base": 120,
+		"xp_per_level": 80,
 		"attribute_gain_per_level": 1
 	},
 	"training": {
 		"resource_id": "credits",
 		"base_cost": 25,
-		"cost_growth": 1.5,
-		"xp_per_session": 30
+		"cost_growth": 1.4,
+		"xp_per_session": 40
 	},
 	"starting_agents": [
 		{

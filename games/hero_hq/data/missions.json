@@ -10,7 +10,7 @@
 		"minimum_rating": 60,
 		"required_role_ids": [],
 		"rewards": {"credits": 18},
-		"xp": 24
+		"xp": 8
 	},
 	{
 		"id": "s_breakin",
@@ -18,12 +18,12 @@
 		"kind": "solo",
 		"stage_id": "street",
 		"category_id": "crime",
-		"base_seconds": 45,
+		"base_seconds": 30,
 		"required_agent_count": 1,
-		"minimum_rating": 70,
+		"minimum_rating": 80,
 		"required_role_ids": [],
 		"rewards": {"credits": 45},
-		"xp": 40
+		"xp": 12
 	},
 	{
 		"id": "s_drone",
@@ -31,12 +31,12 @@
 		"kind": "solo",
 		"stage_id": "city",
 		"category_id": "technology",
-		"base_seconds": 90,
+		"base_seconds": 45,
 		"required_agent_count": 1,
-		"minimum_rating": 80,
+		"minimum_rating": 100,
 		"required_role_ids": [],
-		"rewards": {"credits": 90, "intel": 2},
-		"xp": 60
+		"rewards": {"credits": 95, "intel": 1},
+		"xp": 16
 	},
 	{
 		"id": "s_rooftop",
@@ -44,11 +44,37 @@
 		"kind": "solo",
 		"stage_id": "city",
 		"category_id": "crime",
-		"base_seconds": 150,
+		"base_seconds": 60,
 		"required_agent_count": 1,
-		"minimum_rating": 90,
+		"minimum_rating": 120,
 		"required_role_ids": [],
-		"rewards": {"credits": 210, "intel": 4},
-		"xp": 110
+		"rewards": {"credits": 190, "intel": 2},
+		"xp": 20
+	},
+	{
+		"id": "s_convoy",
+		"name_key": "tasks.s_convoy",
+		"kind": "solo",
+		"stage_id": "city",
+		"category_id": "rescue",
+		"base_seconds": 90,
+		"required_agent_count": 1,
+		"minimum_rating": 140,
+		"required_role_ids": [],
+		"rewards": {"credits": 430, "intel": 4},
+		"xp": 24
+	},
+	{
+		"id": "s_siege",
+		"name_key": "tasks.s_siege",
+		"kind": "solo",
+		"stage_id": "national",
+		"category_id": "catastrophe",
+		"base_seconds": 120,
+		"required_agent_count": 1,
+		"minimum_rating": 160,
+		"required_role_ids": [],
+		"rewards": {"credits": 900, "intel": 8},
+		"xp": 30
 	}
 ]
