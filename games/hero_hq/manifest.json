@@ -1,0 +1,39 @@
+{
+	"pack_schema_version": 1,
+	"game_id": "hero_hq",
+	"content_version": 1,
+	"display_name_key": "game.title",
+	"default_locale": "en",
+	"entry_scene": "res://games/hero_hq/scenes/app.tscn",
+	"mechanics": [
+		"agents",
+		"training",
+		"recruitment",
+		"squads",
+		"timed_tasks",
+		"automation",
+		"focus"
+	],
+	"resources": ["credits", "intel"],
+	"starting_resources": {
+		"credits": 250,
+		"intel": 0
+	},
+	"max_offline_seconds": 28800,
+	"roster_capacity": 12,
+	"navigation": [
+		{"id": "hq", "label_key": "tabs.hq"},
+		{"id": "heroes", "label_key": "tabs.heroes"},
+		{"id": "missions", "label_key": "tabs.missions"},
+		{"id": "teams", "label_key": "tabs.teams"},
+		{"id": "upgrades", "label_key": "tabs.upgrades"}
+	],
+	"data_paths": {
+		"roles": "data/roles.json",
+		"agents": "data/agents.json",
+		"missions": "data/missions.json",
+		"progression": "data/progression.json"
+	},
+	"locale_path": "locale/en.json",
+	"theme_path": "ui/theme.json"
+}

@@ -1,0 +1,30 @@
+{
+	"stages": [
+		{"id": "street", "name_key": "stages.street", "order": 1},
+		{"id": "city", "name_key": "stages.city", "order": 2},
+		{"id": "national", "name_key": "stages.national", "order": 3}
+	],
+	"categories": [
+		{"id": "crime", "name_key": "categories.crime"},
+		{"id": "rescue", "name_key": "categories.rescue"},
+		{"id": "technology", "name_key": "categories.technology"},
+		{"id": "paranormal", "name_key": "categories.paranormal"},
+		{"id": "catastrophe", "name_key": "categories.catastrophe"}
+	],
+	"command_levels": [
+		{
+			"level": 1,
+			"name_key": "command.level_1",
+			"requirements": []
+		},
+		{
+			"level": 2,
+			"name_key": "command.level_2",
+			"requirements": [
+				{"type": "own_agents", "count": 3},
+				{"type": "complete_tasks", "count": 6},
+				{"type": "earn_resource_lifetime", "resource_id": "credits", "amount": 500}
+			]
+		}
+	]
+}

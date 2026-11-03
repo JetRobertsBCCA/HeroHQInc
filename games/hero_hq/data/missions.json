@@ -1,0 +1,14 @@
+[
+	{
+		"id": "s_alley",
+		"name_key": "tasks.s_alley",
+		"kind": "solo",
+		"stage_id": "street",
+		"category_id": "crime",
+		"base_seconds": 20,
+		"required_agent_count": 1,
+		"minimum_rating": 60,
+		"required_role_ids": [],
+		"rewards": {"credits": 18}
+	}
+]
