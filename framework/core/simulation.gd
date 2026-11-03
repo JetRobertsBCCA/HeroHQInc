@@ -29,6 +29,7 @@ static func new_state(pack: GamePack, seed_value: int, utc_now: int) -> GameStat
 	state.last_settled_utc = utc_now
 	state.resources = pack.starting_resources.duplicate(true)
 	state.stats = {"tasks_completed": 0, "earned": {}}
+	state.prestige = {"chips": 0, "count": 0, "run_earnings": 0.0}
 	seed_missing_starter_agents(state, pack)
 	state.extensions["simulation"] = {"seed": seed_value, "assignment_seq": 0}
 	return state
@@ -322,11 +323,14 @@ static func _complete_assignment(
 	var task: Dictionary = pack.task(task_id)
 	var rewards := {}
 
+	# Rebirth chips multiply every payout, which is what makes a later run faster.
+	var payout := Prestige.multiplier(state, pack)
+	var run_resource := Prestige.resource_id(pack)
 	var declared: Variant = task.get("rewards", null)
 	if declared is Dictionary:
 		for raw_id in (declared as Dictionary).keys():
 			var resource_id := str(raw_id)
-			var amount := float((declared as Dictionary)[raw_id])
+			var amount := float((declared as Dictionary)[raw_id]) * payout
 			if not is_finite(amount):
 				continue
 			rewards[resource_id] = amount
@@ -334,6 +338,8 @@ static func _complete_assignment(
 			var earned: Dictionary = state.stats.get("earned", {})
 			earned[resource_id] = float(earned.get(resource_id, 0.0)) + amount
 			state.stats["earned"] = earned
+			if resource_id == run_resource:
+				state.add_run_earnings(amount)
 
 	var agent_ids: Array = assignment.get("agent_ids", [])
 	for raw_id in agent_ids:
