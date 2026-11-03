@@ -14,6 +14,7 @@ const STARTING_SEED := 1
 const HOME_TAB := "hq"
 const HEROES_TAB := "heroes"
 const MISSIONS_TAB := "missions"
+const UPGRADES_TAB := "upgrades"
 const STARTER_ROLE_ORDER := ["vanguard", "striker", "tech", "support", "mystic"]
 const TICK_SECONDS := 1.0
 const SAVE_EVERY_TICKS := 10
@@ -28,6 +29,7 @@ var _settled_seconds: float = 0.0
 var _events_log: Array[String] = []
 var _task_board: TaskBoard
 var _roster: RosterScreen
+var _prestige_screen: PrestigeScreen
 var _tick_count: int = 0
 
 
@@ -117,6 +119,7 @@ func _on_tick() -> void:
 func _on_tab_selected(tab_id: String) -> void:
 	_task_board = null
 	_roster = null
+	_prestige_screen = null
 	if tab_id == HOME_TAB:
 		_shell.set_content(_build_hq_content())
 		return
@@ -133,6 +136,13 @@ func _on_tab_selected(tab_id: String) -> void:
 		_roster.train_requested.connect(_on_train_requested)
 		_roster.refresh(_pack, _state)
 		_shell.set_content(_roster)
+		return
+	if tab_id == UPGRADES_TAB:
+		_prestige_screen = PrestigeScreen.new()
+		_prestige_screen.name = "PrestigeScreen"
+		_prestige_screen.rebirth_requested.connect(_on_rebirth_requested)
+		_prestige_screen.refresh(_pack, _state)
+		_shell.set_content(_prestige_screen)
 		return
 	_shell.set_content(_build_placeholder(tab_id))
 
@@ -171,6 +181,27 @@ func _on_train_requested(agent_id: String) -> void:
 		_refresh_content()
 		return
 	_record_events(result.get("events", []))
+	SaveService.save_state(_state)
+	_refresh_content()
+
+
+func _on_rebirth_requested() -> void:
+	var result := Prestige.rebirth(_state, _pack, _clock.now_utc())
+	if not result.get("ok", false):
+		_log("%s: %s" % [
+			_pack.label("ui.prestige_button", "Rebirth"),
+			_pack.label(
+				"ui.blocked_%s" % str(result.get("code", "")),
+				str(result.get("code", "")),
+			),
+		])
+		_refresh_content()
+		return
+	_record_events([{
+		"type": "prestige",
+		"gained": int(result["gained"]),
+		"chips": int(result["chips"]),
+	}])
 	SaveService.save_state(_state)
 	_refresh_content()
 
@@ -310,6 +341,8 @@ func _record_events(events: Array) -> void:
 			_log(_task_completed_text(entry))
 		elif event_type == "level_up":
 			_log(_level_up_text(entry))
+		elif event_type == "prestige":
+			_log(_prestige_text(entry))
 
 
 func _task_completed_text(entry: Dictionary) -> String:
@@ -330,6 +363,15 @@ func _level_up_text(entry: Dictionary) -> String:
 		agent_name,
 		_pack.label("ui.level_up", "reached level"),
 		int(entry.get("level", 1)),
+	]
+
+
+func _prestige_text(entry: Dictionary) -> String:
+	return "%s +%d (%s %d)" % [
+		_pack.label("ui.prestige_done", "Rebirth complete"),
+		int(entry.get("gained", 0)),
+		_pack.label("ui.prestige_chips", "chips"),
+		int(entry.get("chips", 0)),
 	]
 
 
