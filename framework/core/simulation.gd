@@ -271,7 +271,8 @@ static func training_cost(state: GameState, pack: GamePack, agent_id: String) ->
 	var level := maxi(int(agent.get("level", 1)), 1)
 	var base := maxf(float(pack.training.get("base_cost", 0.0)), 0.0)
 	var growth := maxf(float(pack.training.get("cost_growth", 1.0)), 1.0)
-	return int(ceilf(base * pow(growth, float(level - 1))))
+	var raw := base * pow(growth, float(level - 1))
+	return maxi(int(ceilf(raw * Research.training_multiplier(state, pack))), 1)
 
 
 ## Spends the pack's training resource to grant XP, applying level-ups.
@@ -323,8 +324,8 @@ static func _complete_assignment(
 	var task: Dictionary = pack.task(task_id)
 	var rewards := {}
 
-	# Rebirth chips multiply every payout, which is what makes a later run faster.
-	var payout := Prestige.multiplier(state, pack)
+	# Permanent multipliers stack: rebirth chips, then research ranks.
+	var payout := Prestige.multiplier(state, pack) * Research.reward_multiplier(state, pack)
 	var run_resource := Prestige.resource_id(pack)
 	var declared: Variant = task.get("rewards", null)
 	if declared is Dictionary:
