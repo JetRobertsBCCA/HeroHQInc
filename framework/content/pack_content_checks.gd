@@ -114,6 +114,7 @@ static func check_rules(document: Dictionary, manifest: Dictionary) -> Array[Dic
 				))
 
 	errors.append_array(check_prestige(manifest))
+	errors.append_array(check_research(manifest))
 
 	var training: Variant = document.get("training", null)
 	if training != null:
@@ -187,6 +188,72 @@ static func check_prestige(manifest: Dictionary) -> Array[Dictionary]:
 		errors.append(PackValidator.error(
 			"invalid_value", "manifest", "prestige.min_level must be >= 1.",
 		))
+	return errors
+
+
+## Optional permanent research. Absent means no research; present must be
+## internally consistent and use only effects the simulation implements.
+static func check_research(manifest: Dictionary) -> Array[Dictionary]:
+	var errors: Array[Dictionary] = []
+	var research: Variant = manifest.get("research", null)
+	if research == null:
+		return errors
+	if not (research is Dictionary):
+		errors.append(PackValidator.error("invalid_value", "manifest", "research must be an object."))
+		return errors
+	var rules: Dictionary = research
+	var resource_ids := PackValidator.string_set(manifest.get("resources", []))
+	var resource_id := str(rules.get("resource_id", ""))
+	if not resource_ids.has(resource_id):
+		errors.append(PackValidator.error(
+			"dangling_reference", "manifest",
+			"research.resource_id '%s' is not a declared resource." % resource_id,
+		))
+	var branches: Variant = rules.get("branches", null)
+	if not (branches is Array) or (branches as Array).is_empty():
+		errors.append(PackValidator.error(
+			"invalid_value", "manifest", "research.branches must be a non-empty array.",
+		))
+		return errors
+	var seen: Dictionary = {}
+	for raw in branches:
+		if not (raw is Dictionary):
+			errors.append(PackValidator.error(
+				"invalid_value", "manifest", "Research branches must be objects.",
+			))
+			continue
+		var branch: Dictionary = raw
+		var id := str(branch.get("id", ""))
+		if not PackValidator.matches(id, PackValidator.ID_PATTERN):
+			errors.append(PackValidator.error(
+				"invalid_id", "manifest", "Research id '%s' is invalid." % id,
+			))
+		if seen.has(id):
+			errors.append(PackValidator.error(
+				"duplicate_id", "manifest", "Duplicate research id '%s'." % id,
+			))
+		seen[id] = true
+		if int(branch.get("max_rank", 0)) < 1:
+			errors.append(PackValidator.error(
+				"invalid_value", "manifest", "Research '%s' max_rank must be >= 1." % id,
+			))
+		if float(branch.get("base_cost", 0)) < 0.0:
+			errors.append(PackValidator.error(
+				"invalid_value", "manifest", "Research '%s' base_cost must be >= 0." % id,
+			))
+		if float(branch.get("cost_growth", 1)) < 1.0:
+			errors.append(PackValidator.error(
+				"invalid_value", "manifest", "Research '%s' cost_growth must be >= 1." % id,
+			))
+		if not Research.SUPPORTED_EFFECTS.has(str(branch.get("effect", ""))):
+			errors.append(PackValidator.error(
+				"invalid_value", "manifest",
+				"Research '%s' effect must be one of %s." % [id, str(Research.SUPPORTED_EFFECTS)],
+			))
+		if float(branch.get("per_rank", 0)) < 0.0:
+			errors.append(PackValidator.error(
+				"invalid_value", "manifest", "Research '%s' per_rank must be >= 0." % id,
+			))
 	return errors
 
 
