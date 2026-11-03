@@ -70,5 +70,22 @@
 	"ui.blocked_unknown_agent": "Hero not found",
 	"ui.blocked_unknown_task": "Unknown task",
 	"ui.blocked_insufficient_resource": "Not enough Credits",
-	"ui.blocked_training_unavailable": "Training unavailable"
+	"ui.blocked_training_unavailable": "Training unavailable",
+
+	"ui.prestige_title": "Command Rebirth",
+	"ui.prestige_chips": "Chips",
+	"ui.prestige_multiplier": "Reward multiplier",
+	"ui.prestige_run": "Lifetime earnings",
+	"ui.prestige_run_now": "This run",
+	"ui.prestige_gain": "Rebirth for",
+	"ui.prestige_count": "Rebirths",
+	"ui.prestige_button": "Rebirth",
+	"ui.prestige_confirm": "Confirm rebirth",
+	"ui.prestige_done": "Rebirth complete",
+	"ui.prestige_note": "Resets level, training and Credits. Chips, roster and lifetime totals stay.",
+
+	"ui.blocked_prestige_unavailable": "Rebirth is not part of this pack",
+	"ui.blocked_prestige_earnings_short": "Earn more Credits this run to unlock rebirth",
+	"ui.blocked_prestige_level_short": "Reach a higher level to unlock rebirth",
+	"ui.blocked_prestige_no_pending": "No new chips yet — keep earning"
 }
