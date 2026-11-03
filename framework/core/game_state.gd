@@ -27,6 +27,8 @@ var automation_rules: Array = []
 ## Lifetime totals used by progression requirements:
 ## {tasks_completed: int, earned: {resource_id: float}}
 var stats: Dictionary = {}
+## Rebirth state: {chips: int, count: int, run_earnings: float}
+var prestige: Dictionary = {}
 ## module_id -> { ... } state owned by optional game-specific rule modules
 var extensions: Dictionary = {}
 
@@ -44,6 +46,7 @@ func to_dict() -> Dictionary:
 		"upgrades": upgrades.duplicate(true),
 		"automation_rules": automation_rules.duplicate(true),
 		"stats": stats.duplicate(true),
+		"prestige": prestige.duplicate(true),
 		"extensions": extensions.duplicate(true),
 	}
 
@@ -61,6 +64,7 @@ static func from_dict(source: Dictionary) -> GameState:
 	state.upgrades = _as_dictionary(source.get("upgrades"))
 	state.automation_rules = _as_array(source.get("automation_rules"))
 	state.stats = _as_dictionary(source.get("stats"))
+	state.prestige = _as_dictionary(source.get("prestige"))
 	state.extensions = _as_dictionary(source.get("extensions"))
 	return state
 
@@ -71,6 +75,21 @@ func resource(resource_id: String) -> float:
 
 func tasks_completed() -> int:
 	return int(stats.get("tasks_completed", 0))
+
+
+func prestige_chips() -> int:
+	return int(prestige.get("chips", 0))
+
+
+## Earnings of the current run, in the pack's prestige resource.
+func run_earnings() -> float:
+	return float(prestige.get("run_earnings", 0.0))
+
+
+func add_run_earnings(amount: float) -> void:
+	if amount <= 0.0:
+		return
+	prestige["run_earnings"] = run_earnings() + amount
 
 
 func earned_total(resource_id: String) -> float:
