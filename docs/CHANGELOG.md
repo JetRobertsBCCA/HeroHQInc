@@ -3,6 +3,62 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.1 — Power-curve tuning (2026-11-03)
+
+Status: complete and measured. Content version bumped to 2.
+
+### What was wrong
+
+`tooling/balance_report.gd` simulates a greedy player against the real pack. Run
+against the first M1 numbers it showed three defects:
+
+- 250 starting Credits bought two level-ups instantly, so three of the four tasks
+  were unlocked at **t = 0** and the player never touched the early tiers.
+- Income per minute was nearly flat across tiers (54, 60, 61, 86/min), so a new
+  unlock was not a power spike worth chasing.
+- Levels accelerated instead of slowing: task XP (24–110) dwarfed the XP curve
+  (thresholds rising by only 40), so the curve inverted.
+
+### Research used
+
+- Idle-game cost curves are exponential while rewards are linear; when costs
+  outrun rewards too early it feels bad, and manual per-upgrade tuning does not
+  scale — Gabriel Padinha, *Balancing Tips: How We Managed Math on Idle Idol*.
+  <https://www.gamedeveloper.com/design/balancing-tips-how-we-managed-math-on-idle-idol>
+- Growth must stay multiplicative to stay perceptible (Weber–Fechner): each step
+  should read as a visible multiple of the last, with cost growing slightly faster
+  than reward to slow the pace. First sessions run 15–60 minutes of active play,
+  and optimal wait times lengthen as engagement decays — Eric Guan, *Idle Game
+  Design Principles* <https://ericguan.substack.com/p/idle-game-design-principles>
+- Progression should be deliberately "bumpy" with slow and fast stretches, and
+  the model is a rough feel-check, not a prediction — Anthony Pecorella,
+  *The Math of Idle Games, Part III*.
+  <https://www.gamedeveloper.com/design/the-math-of-idle-games-part-iii>
+
+### What changed
+
+- Starting Credits **250 → 50**: one training session, no free levels.
+- Task ladder **4 → 6 tiers** with gates 60/80/100/120/140/160, one gate per
+  level (+20 rating from the Striker growth curve).
+- Income per minute now steps **1.4–1.7× per tier** (54 → 90 → 128 → 192 → 289 →
+  454), so every unlock is a felt upgrade.
+- Task XP cut to a trickle (8–30) and the XP curve raised to `base 120, +80/level`,
+  making **training the power source and tasks the income source** rather than the
+  other way round.
+- Training gives **+40 XP for 25 Credits at ×1.4 cost growth** (was +30 at ×1.5),
+  which keeps cost growth ahead of reward growth without stalling.
+- Measured result: tiers unlock at 0:00, 0:40, 2:10, 5:10, 8:10, 11:10; levels then
+  slow to 15:10, 21:10, 29:10, 41:10, 59:10.
+
+### Known limitations of this pass
+
+- Intel has no sink yet, so it is included in the rate model at face value. That is
+  a proxy, not a finished economy; M4 upgrades are where it should be spent.
+- The ladder still ends after ~11 minutes with nothing new to unlock. Levels keep
+  going, but new content (recruitment, squads) is M2–M3 work.
+- The report models one greedy agent, not humans. It catches walls and inverted
+  curves; it cannot judge whether the game is *fun*.
+
 ## M1 — Single-hero functional loop (2026-11-03)
 
 Status: complete, gate met in a headless environment. No Android, ad or billing
@@ -134,8 +190,8 @@ Status: complete, gate met in a headless environment. Not yet verified on Androi
 - Android export, device testing, ad SDKs and Play Billing are untouched (M6–M7).
 - `HERO_HQ_MASTER_CODEX.md` is not in the repository yet; it was supplied as a chat
   attachment, not as a file in this workspace.
-- Only one task definition is committed; the remaining solo and team operations are
-  M1–M3 content.
+- Only one task definition is committed; the remaining nine solo and eight team
+  operations are M1–M3 content.
 - HQ is a placeholder: it shows real roster and resource state but cannot dispatch.
 - No accessibility/reduced-motion pass and no numeric compaction yet (M5).
 
