@@ -47,7 +47,9 @@ func test_pack_carries_the_tuning_the_loop_needs() -> void:
 	assert_eq(float(pack.leveling.get("xp_per_level", 0)), 80.0, "the XP curve grows with level")
 	assert_eq(str(pack.training.get("resource_id", "")), "credits", "training spends a declared resource")
 	assert_true(float(pack.training.get("xp_per_session", 0)) > 0.0, "training grants XP")
-	assert_eq(pack.roster_capacity, 12, "roster capacity is pack data")
+	assert_eq(pack.roster_capacity, 240, "roster capacity is pack data")
+	assert_eq(Recruitment.named_count(pack), 200, "the named recruit pool is pack data")
+	assert_eq(Recruitment.tier_rules(pack).size(), 3, "recruit tiers are pack data")
 
 
 func test_every_task_pays_only_declared_resources() -> void:
