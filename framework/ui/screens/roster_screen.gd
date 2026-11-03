@@ -1,18 +1,24 @@
 class_name RosterScreen
 extends Control
-## Agent roster: rating, level, XP progress and paid training.
+## Agent roster: rating, level, XP progress, paid training and recruitment.
 ##
-## Training rules come from the pack, so a pack without `training` simply shows
-## no train button instead of a dead control.
+## Training and recruitment rules come from the pack, so a pack without those
+## blocks simply shows no control instead of a dead button.
 
 signal train_requested(agent_id: String)
+signal recruit_requested()
 
 const MIN_TAP_HEIGHT := 48
+## A 240-slot roster does not need 240 live rows to be usable, and building
+## them every refresh would cost a frame on a phone.
+const MAX_ROWS := 60
 
 var _pack: GamePack
 var _state: GameState
 var _root: VBoxContainer
 var _list: VBoxContainer
+var _recruit_box: VBoxContainer
+var _recruit_button: Button
 var _buttons: Dictionary = {}
 
 
@@ -27,21 +33,46 @@ func train_button(agent_id: String) -> Button:
 	return null
 
 
+func recruit_button() -> Button:
+	return _recruit_button
+
+
 func refresh(pack: GamePack, state: GameState) -> void:
 	_pack = pack
 	_state = state
 	_ensure_built()
 	_clear(_list)
 	_buttons.clear()
+	_refresh_recruitment()
 	var agent_ids: Array = state.agents.keys()
-	agent_ids.sort()
+	agent_ids.sort_custom(func(a: Variant, b: Variant) -> bool:
+		var first: Dictionary = state.agents[a]
+		var second: Dictionary = state.agents[b]
+		var rating_a := AgentRules.rating_value(first)
+		var rating_b := AgentRules.rating_value(second)
+		if not is_equal_approx(rating_a, rating_b):
+			return rating_a > rating_b
+		return str(a) < str(b)
+	)
+	var shown := 0
 	for raw_id in agent_ids:
+		if shown >= MAX_ROWS:
+			break
 		_list.add_child(_agent_row(str(raw_id), state.agents[raw_id]))
+		shown += 1
 	if agent_ids.is_empty():
 		var empty := Label.new()
 		empty.text = pack.label("ui.no_agents", "No agents yet")
 		empty.add_theme_color_override("font_color", ThemeTokens.color(pack, "muted"))
 		_list.add_child(empty)
+	elif agent_ids.size() > MAX_ROWS:
+		var note := Label.new()
+		note.text = pack.label("ui.roster_showing", "Showing first %d of %d") % [
+			MAX_ROWS, agent_ids.size(),
+		]
+		note.add_theme_font_size_override("font_size", 11)
+		note.add_theme_color_override("font_color", ThemeTokens.color(pack, "muted"))
+		_list.add_child(note)
 
 
 func _ensure_built() -> void:
@@ -56,6 +87,11 @@ func _ensure_built() -> void:
 	_root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_root.add_theme_constant_override("separation", 8)
 	scroll.add_child(_root)
+	var recruit_panel := PanelContainer.new()
+	_root.add_child(recruit_panel)
+	_recruit_box = VBoxContainer.new()
+	_recruit_box.add_theme_constant_override("separation", 4)
+	recruit_panel.add_child(_recruit_box)
 	_list = VBoxContainer.new()
 	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_list.add_theme_constant_override("separation", 8)
@@ -145,6 +181,81 @@ func _training_row(agent_id: String) -> Control:
 		reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		row.add_child(reason)
 	return row
+
+
+func _refresh_recruitment() -> void:
+	for child in _recruit_box.get_children():
+		_recruit_box.remove_child(child)
+		child.queue_free()
+	_recruit_button = null
+	if not Recruitment.enabled(_pack):
+		_recruit_box.get_parent().visible = false
+		return
+	_recruit_box.get_parent().visible = true
+	var candidate := Recruitment.next_candidate(_state, _pack)
+	if candidate.is_empty():
+		return
+
+	var heading := Label.new()
+	heading.text = _pack.label("ui.recruit", "Recruit")
+	heading.add_theme_font_size_override("font_size", 14)
+	heading.add_theme_color_override("font_color", ThemeTokens.color(_pack, "accent"))
+	_recruit_box.add_child(heading)
+
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 8)
+	var name_label := Label.new()
+	name_label.text = str(candidate["name"])
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_label.add_theme_color_override("font_color", ThemeTokens.color(_pack, "text"))
+	top.add_child(name_label)
+	var rating_label := Label.new()
+	rating_label.text = "%s %d" % [_pack.label("ui.rating", "Rating"), int(candidate["rating"])]
+	rating_label.add_theme_color_override("font_color", ThemeTokens.color(_pack, "reward"))
+	rating_label.add_theme_font_size_override("font_size", 12)
+	top.add_child(rating_label)
+	_recruit_box.add_child(top)
+
+	var role_id := str(candidate["role_id"])
+	var tier_id := str(candidate["tier_id"])
+	var detail := Label.new()
+	detail.text = "%s · %s" % [
+		_pack.label(str(_pack.role(role_id).get("name_key", "")), role_id),
+		_pack.label("tiers.%s" % tier_id, tier_id),
+	]
+	detail.add_theme_font_size_override("font_size", 11)
+	detail.add_theme_color_override("font_color", ThemeTokens.color(_pack, "muted"))
+	_recruit_box.add_child(detail)
+
+	var resource := Recruitment.resource_id(_pack)
+	var price := int(candidate.get("cost", 0))
+	var affordable := _state.resource(resource) + 0.0001 >= float(price)
+	var full := _state.agents.size() >= Recruitment.capacity(_pack)
+	_recruit_button = Button.new()
+	_recruit_button.name = "RecruitButton"
+	_recruit_button.custom_minimum_size = Vector2(0, MIN_TAP_HEIGHT)
+	_recruit_button.disabled = full or not affordable
+	if full:
+		_recruit_button.text = _pack.label("ui.roster_full", "Roster full")
+	else:
+		_recruit_button.text = "%s · %d %s" % [
+			_pack.label("ui.recruit", "Recruit"),
+			price,
+			_pack.label("resources.%s" % resource, resource),
+		]
+	_recruit_button.pressed.connect(_on_recruit_pressed)
+	_recruit_box.add_child(_recruit_button)
+	if not full and not affordable:
+		var reason := Label.new()
+		reason.text = _pack.label("ui.blocked_insufficient_resource", "Not enough resources")
+		reason.add_theme_font_size_override("font_size", 11)
+		reason.add_theme_color_override("font_color", ThemeTokens.color(_pack, "warning"))
+		reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_recruit_box.add_child(reason)
+
+
+func _on_recruit_pressed() -> void:
+	recruit_requested.emit()
 
 
 func _on_train_pressed(agent_id: String) -> void:
