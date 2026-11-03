@@ -3,6 +3,81 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1 — Single-hero functional loop (2026-11-03)
+
+Status: complete, gate met in a headless environment. No Android, ad or billing
+work exists at M1.
+
+### Delivered
+
+- [x] `framework/core/agent_rules.gd`: neutral rating (`5 × sum of attributes`),
+      XP curve read from the pack, and level-ups that apply the agent's role
+      growth curve. No attribute name is hardcoded.
+- [x] Assignment lifecycle in `Simulation`: `evaluate_assignment` (task exists,
+      agent count, agents exist, availability, required roles, rating gate),
+      `assign_task`, deterministic `auto_select_agents` (required roles first,
+      then rating, then id) and a one-call `deploy` for the UI.
+- [x] Settlement in `simulate_delta`: assignments whose deadline has passed are
+      completed in `(ends_utc, assignment_id)` order — rewards paid once,
+      lifetime stats recorded, task XP granted to each assigned agent, level-ups
+      applied, agents freed, and a `task_completed` event plus any `level_up`
+      events returned. Online ticks and launch-time absence use this one call.
+- [x] Paid training: cost derived from pack tuning with `cost_growth` escalation,
+      affordability check, XP grant and level-ups. `train_agent` returns a
+      structured result instead of mutating silently.
+- [x] `framework/ui/screens/task_board.gd`: active operations with live
+      countdowns, one card per declared task, deploy button disabled with the
+      pack's own reason string, 48px minimum tap targets, one-second `tick()`
+      that updates only countdown labels.
+- [x] `framework/ui/screens/roster_screen.gd`: rating, level, XP progress bar and
+      training control per agent; hidden entirely when a pack declares no
+      training rules.
+- [x] `framework/ui/text_format.gd` for amounts, durations and reward strings.
+- [x] App wiring: a single 1-second `Timer` settles time and refreshes the shell,
+      HQ logs the last four results, deploys and training save immediately, and
+      progress is saved periodically while idle.
+- [x] Restore guard: a save that restores without a roster is reseeded from pack
+      data, so an old or incomplete save can never leave the player unable to act.
+- [x] Content: four-step task ladder (20 s / 45 s / 90 s / 150 s, rating gates
+      60/70/80/90, 18–210 Credits plus Intel at the top end), `leveling` and
+      `training` tuning blocks, and locale strings for every new label.
+- [x] Validator: optional `leveling`/`training` blocks are checked when present
+      (positive XP base, non-negative growth, `cost_growth >= 1`, training must
+      spend a declared resource) and task `xp` must be finite and non-negative.
+      Packs that omit the blocks keep the framework defaults and stay valid.
+- [x] Tests: **54** (up from 31), adding task lifecycle, settlement and cap,
+      training, save round-trip with a running assignment, roster healing, and
+      headless screen tests for both new screens.
+- [x] `tooling/demo_loop.gd`: deterministic headless walkthrough of the loop.
+
+### Decisions recorded in this milestone
+
+- **Rating formula:** `5 × sum(attributes)`, which puts the starter at 70 and keeps
+  ratings small integers. A squad's rating is the mean of its members, so M3 squads
+  work without changing the gate semantics.
+- **Task XP** is granted in full to each assigned agent. With one agent in M1 this
+  is unambiguous; M3 revisits whether a squad splits or duplicates XP.
+- **Training is instant** (no timer) in M1. Timed training arrives with the
+  automation milestone rather than being half-built now.
+- **No cancel button.** M1 has no cancel requirement; adding one would need a
+  refund policy that is not specified yet.
+- **Save schema stays v1.** `stats` is additive and defaults to `{}` on load, so M0
+  saves load unchanged; no migration path is needed yet.
+- **Offline and online share one completion rule**; there is deliberately no
+  separate "offline earnings" formula that could drift from live play.
+
+### Known limitations / not done at M1
+
+- No recruitment, squads, upgrades, automation, focus or command-level progression
+  screen: the ladder is declared in data but not yet enforced or rewarded.
+- Android export, device testing, ad SDKs and Play Billing are untouched (M6–M7).
+- `HERO_HQ_MASTER_CODEX.md` is still not in the repository (supplied as a chat
+  attachment).
+- Screenshots could not be produced in the CI-style sandbox: it has no X server and
+  no root to install one, so all verification is headless.
+
+Next recommended milestone: **M2 — recruitment and roster depth.**
+
 ## M0 — Repository / project foundation (2026-11-03)
 
 Status: complete, gate met in a headless environment. Not yet verified on Android
@@ -33,7 +108,7 @@ Status: complete, gate met in a headless environment. Not yet verified on Androi
       network from live roster data. Invalid packs render a readable error screen
       instead of crashing.
 - [x] Headless test runner (`tests/run_tests.gd`) with a dependency-free assertion
-      harness and 24 tests over simulation, saves, pack validation, pack loading,
+      harness and 31 tests over simulation, saves, pack validation, pack loading,
       theming, the tab shell, and framework neutrality.
 - [x] `tooling/validate_packs.gd` CI gate; README with run instructions.
 
@@ -59,8 +134,8 @@ Status: complete, gate met in a headless environment. Not yet verified on Androi
 - Android export, device testing, ad SDKs and Play Billing are untouched (M6–M7).
 - `HERO_HQ_MASTER_CODEX.md` is not in the repository yet; it was supplied as a chat
   attachment, not as a file in this workspace.
-- Only one task definition is committed; the remaining nine solo and eight team
-  operations are M1–M3 content.
+- Only one task definition is committed; the remaining solo and team operations are
+  M1–M3 content.
 - HQ is a placeholder: it shows real roster and resource state but cannot dispatch.
 - No accessibility/reduced-motion pass and no numeric compaction yet (M5).
 
