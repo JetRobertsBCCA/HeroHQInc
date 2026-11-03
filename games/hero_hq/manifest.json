@@ -19,6 +19,15 @@
 		"credits": 50,
 		"intel": 0
 	},
+	"prestige": {
+		"resource_id": "credits",
+		"threshold_amount": 4000,
+		"scale": 1000,
+		"exponent": 0.45,
+		"gain_factor": 2,
+		"bonus_per_chip": 0.05,
+		"min_level": 7
+	},
 	"max_offline_seconds": 28800,
 	"roster_capacity": 12,
 	"navigation": [
