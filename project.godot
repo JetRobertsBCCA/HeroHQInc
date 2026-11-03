@@ -1,0 +1,33 @@
+; Engine configuration file.
+; HERO//HQ — portrait, offline-first incremental agency management.
+; Engine pinned to Godot 4.7.2 stable (see docs/CHANGELOG.md).
+
+config_version=5
+
+[application]
+
+config/name="HERO//HQ"
+config/description="Portrait incremental superhero-agency game running on a game-neutral framework."
+config/version="0.1.0"
+run/main_scene="res://games/hero_hq/scenes/app.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+
+[display]
+
+window/size/viewport_width=360
+window/size/viewport_height=640
+window/size/window_width_override=400
+window/size/window_height_override=711
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=1
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
