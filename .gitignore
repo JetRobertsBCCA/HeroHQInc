@@ -1,0 +1,13 @@
+# Godot 4 editor and import caches
+.godot/
+*.translation
+
+# Local build output
+build/
+android/
+export_presets.cfg
+*.tmp
+
+# OS noise
+.DS_Store
+Thumbs.db
