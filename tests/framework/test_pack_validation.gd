@@ -219,6 +219,43 @@ func test_loader_refuses_an_invalid_pack() -> void:
 	_remove_fixture("fixture_loader_bad")
 
 
+func test_valid_tuning_rules_are_accepted() -> void:
+	var files := _base_files("fixture_rules")
+	(files["data/agents.json"] as Dictionary)["leveling"] = {"xp_base": 50, "xp_per_level": 10}
+	(files["data/agents.json"] as Dictionary)["training"] = {
+		"resource_id": "tokens", "base_cost": 10, "cost_growth": 1.2, "xp_per_session": 5,
+	}
+	var root := _write_fixture("fixture_rules", files)
+	assert_eq(PackValidator.validate_pack_root(root), [], "sane tuning rules validate")
+	_remove_fixture("fixture_rules")
+
+
+func test_training_must_spend_a_declared_resource() -> void:
+	var files := _base_files("fixture_rules_bad")
+	(files["data/agents.json"] as Dictionary)["training"] = {
+		"resource_id": "gold", "base_cost": 10, "cost_growth": 1.0, "xp_per_session": 5,
+	}
+	var root := _write_fixture("fixture_rules_bad", files)
+	assert_has_error_code(
+		PackValidator.validate_pack_root(root),
+		"dangling_reference",
+		"training may not spend an undeclared resource"
+	)
+	_remove_fixture("fixture_rules_bad")
+
+
+func test_task_xp_must_be_non_negative() -> void:
+	var files := _base_files("fixture_task_xp")
+	((files["data/missions.json"] as Array)[0] as Dictionary)["xp"] = -5
+	var root := _write_fixture("fixture_task_xp", files)
+	assert_has_error_code(
+		PackValidator.validate_pack_root(root),
+		"invalid_value",
+		"negative task xp is rejected"
+	)
+	_remove_fixture("fixture_task_xp")
+
+
 func test_loader_builds_a_usable_pack_from_a_valid_fixture() -> void:
 	var root := _write_fixture("fixture_loader_good", _base_files("fixture_loader_good"))
 	var loaded := GamePackLoader.load_pack_from_root(root)
