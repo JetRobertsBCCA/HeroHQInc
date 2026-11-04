@@ -110,7 +110,8 @@ func agent_name(agent_id: String, agent: Dictionary) -> String:
 	return label(str(agent.get("name_key", "")), agent_id)
 
 
-## "Stage · Category · 0:20 · Rating 60" for a task card subtitle.
+## "Stage · Category · 0:20 · Rating 60" for a task card subtitle, plus the
+## squad size and required roles when the operation declares them.
 func task_detail(task_id: String) -> String:
 	var task := task(task_id)
 	var parts: Array[String] = []
@@ -118,6 +119,16 @@ func task_detail(task_id: String) -> String:
 	parts.append(category_label(str(task.get("category_id", ""))))
 	parts.append(TextFormat.duration(float(task.get("base_seconds", 0))))
 	parts.append("%s %d" % [label("ui.rating", "Rating"), int(task.get("minimum_rating", 0))])
+	var squad := maxi(int(task.get("required_agent_count", 1)), 1)
+	if squad > 1:
+		parts.append("%s %d" % [label("ui.squad", "Squad"), squad])
+	var required_roles: Variant = task.get("required_role_ids", [])
+	if required_roles is Array and not (required_roles as Array).is_empty():
+		var names: Array[String] = []
+		for raw_id in required_roles:
+			var role_id := str(raw_id)
+			names.append(label(str(role(role_id).get("name_key", "")), role_id))
+		parts.append("%s %s" % [label("ui.requires", "Needs"), ", ".join(names)])
 	return " · ".join(parts)
 
 

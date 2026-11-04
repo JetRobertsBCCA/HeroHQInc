@@ -57,7 +57,17 @@ func refresh(pack: GamePack, state: GameState, utc_now: int) -> void:
 	_active_list.visible = has_active
 
 	_available_heading.text = pack.label("ui.available_tasks", "Available tasks")
-	for task_id in pack.task_ids():
+	# The ladder reads by difficulty, not alphabetically: with fifteen tasks the
+	# next reachable operation should be the first one you see.
+	var task_ids: Array = pack.task_ids()
+	task_ids.sort_custom(func(a: String, b: String) -> bool:
+		var rating_a := int(pack.task(a).get("minimum_rating", 0))
+		var rating_b := int(pack.task(b).get("minimum_rating", 0))
+		if rating_a != rating_b:
+			return rating_a < rating_b
+		return a < b
+	)
+	for task_id in task_ids:
 		_available_list.add_child(_task_row(str(task_id)))
 	if pack.task_ids().is_empty():
 		var empty := Label.new()
