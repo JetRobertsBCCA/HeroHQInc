@@ -3,6 +3,57 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.6 — Android export and emulator pass (2026-11-04)
+
+Status: complete on an emulator. Not verified on a physical phone.
+
+### What was wrong
+
+There was no Android export preset, and no phone had ever run the game. Setting
+up the toolchain and driving the debug build on Android 35 surfaced four defects
+that desktop testing could not:
+
+- `ScrollContainer` ignores touch drags, so content below the fold — including
+  the Rebirth button on Upgrades — was unreachable on a phone.
+- Blocked-reason labels on Missions, Heroes (training) and Teams sat beside their
+  button in an HBox. A wrapping label has zero minimum width there, so it
+  rendered as a one-character-wide vertical column and stretched the button to
+  hundreds of pixels tall.
+- Research said "Not enough Credits" for a purchase priced in Intel.
+- A squad that was one hero short reported "No free hero for this task".
+
+### What changed
+
+- `export_presets.cfg`: Android debug preset, arm64-v8a + x86_64, immersive
+  fullscreen, tests/tooling/docs excluded. No longer gitignored.
+- `framework/ui/touch_scroll.gd`: a neutral `ScrollContainer` that translates
+  finger drags into `scroll_vertical`, handles them before the GUI (so it works
+  over buttons), and swallows the release only after a real drag so a scroll
+  cannot press the control it started on. Used by all five scrolling screens.
+- Reasons moved to their own full-width lines in `TaskBoard`, `RosterScreen` and
+  `TeamScreen`; the agent-count reason now carries the required hero count; the
+  insufficient-resource reason formats the actual resource name.
+- `docs/ANDROID.md` records the toolchain, commands, emulator caveats and the
+  verified checklist.
+
+### Checks
+
+- 92/92 tests; validator `OK hero_hq`; `playthrough_demo.gd` PASS; windowed
+  capture of all five tabs unchanged apart from the corrected reasons.
+- Debug APK builds, installs and runs on an Android 35 x86_64 emulator (Pixel 6
+  AVD, `-gpu host`). Verified there: onboarding, first mission and payout, all
+  five tabs, force-stop/relaunch persistence, role-targeted Tech hire, research
+  purchase, and a two-step rebirth (4 chips, resources reset, roster kept at
+  base ratings, research kept).
+- Emulator-only caveat: SwiftShader cannot link Godot's canvas shader (261
+  fragment uniform vectors) and renders black; `-gpu host` is required.
+
+### Known limitations of this pass
+
+- No physical phone, no release signing, no app icon.
+- The rebirth check used a hand-seeded save; the rest was played through the UI.
+- Ads and billing remain untouched by design.
+
 ## M1.5 — Playable v1: guidance, role hiring, honest checks (2026-11-04)
 
 Status: complete. Content version stays 2; no new operations or tuning blocks.

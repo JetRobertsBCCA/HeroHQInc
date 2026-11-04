@@ -96,7 +96,7 @@ func _ensure_built() -> void:
 	if _root != null:
 		return
 	UILayout.fill(self)
-	var scroll := ScrollContainer.new()
+	var scroll := TouchScroll.new()
 	UILayout.fill(scroll)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
@@ -170,15 +170,27 @@ func _task_row(task_id: String) -> Control:
 	row.add_child(button)
 	_deploy_buttons[task_id] = button
 
+	# The reason gets its own full-width line: a wrapping label inside the button
+	# row has zero minimum width and collapses into a one-character column.
 	if not evaluation.get("ok", false):
 		var code := str(evaluation.get("code", ""))
 		var reason := Label.new()
-		reason.text = _pack.label("ui.blocked_%s" % code, code)
+		reason.text = _blocked_text(code, task)
 		reason.add_theme_font_size_override("font_size", 11)
 		reason.add_theme_color_override("font_color", ThemeTokens.color(_pack, "warning"))
 		reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		row.add_child(reason)
+		column.add_child(reason)
 	return panel
+
+
+## Locale text for a block code. A count shortfall states how many agents the
+## operation needs, so "1 of 2" does not read as "every agent is busy".
+func _blocked_text(code: String, task: Dictionary) -> String:
+	if code == Simulation.ERROR_AGENT_COUNT:
+		return _pack.label("ui.blocked_agent_count", "Needs %d available agents") % maxi(
+			int(task.get("required_agent_count", 1)), 1
+		)
+	return _pack.label("ui.blocked_%s" % code, code)
 
 
 func _active_row(assignment_id: String) -> Control:

@@ -6,7 +6,7 @@ coordinated citywide agency while the player builds, trains and automates teams.
 
 - **Engine:** Godot **4.7.2** stable, GDScript, `gl_compatibility` renderer
 - **Target:** Android first, portrait, 360×640 logical canvas with safe-area insets
-- **Status:** **v1 loop complete** (M1.5) — fresh save to rebirth, played end to end; see [docs/CHANGELOG.md](docs/CHANGELOG.md)
+- **Status:** **v1 loop complete** (M1.5) — fresh save to rebirth, played end to end; debug APK verified on an Android 35 emulator (see [docs/ANDROID.md](docs/ANDROID.md)); see [docs/CHANGELOG.md](docs/CHANGELOG.md)
 - **Design source of truth:** `HERO_HQ_MASTER_CODEX.md` (see *Design document* below)
 
 ## Run it
@@ -42,6 +42,22 @@ godot --path . --resolution 360x640 -s res://tooling/ui_capture.gd
 
 Downloads for the pinned engine: <https://godotengine.org/download/linux/>.
 No Android SDK, ad SDK or billing credentials are needed for anything above.
+
+## Android
+
+The repository carries an Android debug preset. With the toolchain from
+[docs/ANDROID.md](docs/ANDROID.md):
+
+```bash
+godot --headless --path . --export-debug "Android" build/hero_hq.apk
+adb install -r build/hero_hq.apk
+```
+
+Verified on an Android 35 x86_64 emulator (Pixel 6 AVD, host GPU), not yet on a
+physical phone: install and launch, fresh-save onboarding, first mission and
+payout, all five tabs, force-stop/relaunch persistence, role-targeted
+recruitment, a research purchase and a two-step rebirth. Use `-gpu host`; the
+software renderer cannot link Godot's canvas shader and shows a black screen.
 
 ## Play the loop
 
@@ -99,11 +115,13 @@ code in `framework/`.
 
 ```text
 project.godot              entry point, portrait/stretch/orientation settings
+export_presets.cfg        Android debug preset (arm64 + x86_64, immersive)
 framework/                 shared, game-neutral engine (never names a title)
   core/                    game_state, clock, simulation, agent_rules,
                            recruitment, research, squads, prestige, save
   content/                 pack loader, pack object, pack validator + content checks
-  ui/                      theme tokens, text formatting, portrait shell, resource bar
+  ui/                      theme tokens, text formatting, portrait shell, resource bar,
+                           touch scrolling
     screens/               task board, roster, team and rebirth screens
     components/            resource bar widget
 games/hero_hq/             HERO//HQ content pack — game #1
@@ -139,7 +157,8 @@ deploy. A lineup can be saved per operation, updated after training, or cleared
 to return to auto-selection.
 
 Not implemented yet: manual per-slot team building, the remaining automation and
-focus layers, monetization (M6), Android export and device testing (M7).
+focus layers, monetization (M6), and physical-device Android testing. The debug
+build runs on an emulator; release signing, an app icon and a phone run remain.
 
 ## Non-negotiable product rules
 

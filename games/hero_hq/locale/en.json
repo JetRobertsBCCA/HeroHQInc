@@ -93,13 +93,13 @@
 	"ui.task_complete": "complete",
 	"ui.level_up": "reached level",
 
-	"ui.blocked_agent_count": "No free hero for this task",
+	"ui.blocked_agent_count": "Needs %d available heroes",
 	"ui.blocked_rating_too_low": "Rating too low",
 	"ui.blocked_agent_busy": "Hero already deployed",
 	"ui.blocked_missing_role": "Required role missing",
 	"ui.blocked_unknown_agent": "Hero not found",
 	"ui.blocked_unknown_task": "Unknown task",
-	"ui.blocked_insufficient_resource": "Not enough Credits",
+	"ui.blocked_insufficient_resource": "Not enough %s",
 	"ui.blocked_training_unavailable": "Training unavailable",
 
 	"ui.prestige_title": "Command Rebirth",

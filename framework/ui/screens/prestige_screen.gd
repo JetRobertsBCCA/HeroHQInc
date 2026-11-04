@@ -109,7 +109,9 @@ func _build_branch_row(rules: Dictionary, resource: String) -> Control:
 	if not button.disabled or price < 0:
 		return column
 	var reason := _body_label(
-		_pack.label("ui.blocked_insufficient_resource", "Not enough resources")
+		_pack.label("ui.blocked_insufficient_resource", "Not enough %s") % _pack.label(
+			"resources.%s" % resource, resource
+		)
 	)
 	reason.add_theme_font_size_override("font_size", 11)
 	reason.add_theme_color_override("font_color", ThemeTokens.color(_pack, "warning"))
@@ -182,7 +184,7 @@ func _ensure_built() -> void:
 	if _root != null:
 		return
 	UILayout.fill(self)
-	var scroll := ScrollContainer.new()
+	var scroll := TouchScroll.new()
 	UILayout.fill(scroll)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)

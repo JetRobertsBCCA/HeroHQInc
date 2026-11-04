@@ -76,7 +76,7 @@ func _ensure_built() -> void:
 	if _root != null:
 		return
 	UILayout.fill(self)
-	var scroll := ScrollContainer.new()
+	var scroll := TouchScroll.new()
 	UILayout.fill(scroll)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
@@ -234,12 +234,22 @@ func _squad_row(task_id: String) -> Control:
 	if not evaluation.get("ok", false):
 		var code := str(evaluation.get("code", ""))
 		var reason := Label.new()
-		reason.text = _pack.label("ui.blocked_%s" % code, code)
+		reason.text = _blocked_text(code, task)
 		reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		reason.add_theme_font_size_override("font_size", 11)
 		reason.add_theme_color_override("font_color", ThemeTokens.color(_pack, "warning"))
 		column.add_child(reason)
 	return panel
+
+
+## Locale text for a block code. A count shortfall states how many agents the
+## operation needs, so a one-short squad does not read as "no agent is free".
+func _blocked_text(code: String, task: Dictionary) -> String:
+	if code == Simulation.ERROR_AGENT_COUNT:
+		return _pack.label("ui.blocked_agent_count", "Needs %d available agents") % maxi(
+			int(task.get("required_agent_count", 1)), 1
+		)
+	return _pack.label("ui.blocked_%s" % code, code)
 
 
 func _on_save(task_id: String, agent_ids: Array) -> void:

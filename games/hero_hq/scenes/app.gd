@@ -307,7 +307,7 @@ func _maybe_auto_repeat(now: int) -> void:
 
 
 func _build_hq_content() -> Control:
-	var scroll := ScrollContainer.new()
+	var scroll := TouchScroll.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 

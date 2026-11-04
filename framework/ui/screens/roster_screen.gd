@@ -96,7 +96,7 @@ func _ensure_built() -> void:
 	if _root != null:
 		return
 	UILayout.fill(self)
-	var scroll := ScrollContainer.new()
+	var scroll := TouchScroll.new()
 	UILayout.fill(scroll)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
@@ -169,8 +169,13 @@ func _agent_row(agent_id: String, agent: Dictionary) -> Control:
 
 
 func _training_row(agent_id: String) -> Control:
+	# The reason gets its own line: inside the button row a wrapping label has
+	# zero minimum width and collapses into a one-character column.
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
+	box.add_child(row)
 
 	var resource_id := str(_pack.training.get("resource_id", ""))
 	var cost := Simulation.training_cost(_state, _pack, agent_id)
@@ -192,12 +197,14 @@ func _training_row(agent_id: String) -> Control:
 
 	if not affordable:
 		var reason := Label.new()
-		reason.text = _pack.label("ui.blocked_insufficient_resource", "Not enough resources")
+		reason.text = _pack.label("ui.blocked_insufficient_resource", "Not enough %s") % _pack.label(
+			"resources.%s" % resource_id, resource_id
+		)
 		reason.add_theme_font_size_override("font_size", 11)
 		reason.add_theme_color_override("font_color", ThemeTokens.color(_pack, "warning"))
 		reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		row.add_child(reason)
-	return row
+		box.add_child(reason)
+	return box
 
 
 func _refresh_recruitment() -> void:
@@ -307,7 +314,9 @@ func _refresh_recruitment() -> void:
 	_recruit_box.add_child(_recruit_button)
 	if not full and not affordable:
 		var reason := Label.new()
-		reason.text = _pack.label("ui.blocked_insufficient_resource", "Not enough resources")
+		reason.text = _pack.label("ui.blocked_insufficient_resource", "Not enough %s") % _pack.label(
+			"resources.%s" % resource, resource
+		)
 		reason.add_theme_font_size_override("font_size", 11)
 		reason.add_theme_color_override("font_color", ThemeTokens.color(_pack, "warning"))
 		reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
