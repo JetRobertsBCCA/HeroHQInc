@@ -283,12 +283,36 @@ func test_task_board_auto_repeat_banner_is_current_and_clears() -> void:
 	assert_eq(banner.status_code(), Simulation.ERROR_UNKNOWN_AGENT, "the banner names the missing member")
 	assert_true(banner.reason_text().contains("Slot 2"), "the banner names the saved slot")
 	assert_true(banner.reason_text().contains("no longer on the roster"), "the reason is explicit")
+	var retry := banner.retry_button()
+	assert_true(retry != null and retry.visible, "a paused rule offers Retry")
+	assert_eq(retry.text, pack.label("ui.auto_repeat_retry", "Retry"), "Retry uses pack copy")
+	var retry_requests: Array = []
+	board.auto_repeat_retry_requested.connect(func() -> void: retry_requests.append(true))
+	retry.pressed.emit()
+	assert_eq(retry_requests.size(), 1, "pressing Retry reaches the app once")
+
+	# A retry while the slot is still missing changes nothing and keeps the
+	# current reason on screen; it must not silently drop the rule.
+	var still_blocked := AutoRepeat.resume(state, pack, 1000)
+	assert_false(still_blocked.get("ok", true), "a blocked retry does not start")
+	board.refresh(pack, state, 1000)
+	assert_eq(banner.status_code(), Simulation.ERROR_UNKNOWN_AGENT, "the reason survives the retry")
+	assert_true(banner.reason_text().contains("Slot 2"), "the retried banner still names the slot")
+	assert_true(retry.visible, "Retry stays available while still blocked")
 
 	state.agents["test_support"] = support
 	board.refresh(pack, state, 1000)
 	assert_eq(banner.status_code(), "", "filling the slot clears the refusal")
 	assert_false(banner.reason_text().contains("no longer on the roster"), "the old reason is not reused")
 	assert_true(banner.status_text().contains("Armed"), "the banner now reads as armed")
+	assert_false(retry.visible, "Retry is hidden once the rule is ready")
+
+	var started := AutoRepeat.resume(state, pack, 1000)
+	assert_true(started.get("ok", false), "a retry after recovery starts the rule")
+	board.refresh(pack, state, 1000)
+	assert_eq(banner.status_code(), AutoRepeat.CODE_BUSY, "the started rule reads as waiting")
+	assert_true(banner.status_text().contains("Waiting"), "the banner reflects the running job")
+	assert_false(retry.visible, "Retry is hidden while the repeated job runs")
 
 	AutoRepeat.forget(state)
 	board.refresh(pack, state, 1000)
@@ -310,6 +334,21 @@ func test_team_auto_repeat_banner_names_a_locked_slot_and_recovers() -> void:
 	assert_eq(banner.status_code(), Simulation.ERROR_AGENT_BUSY, "the banner names the locked slot")
 	assert_true(banner.reason_text().contains("Slot 2"), "the banner names the saved slot")
 	assert_true(banner.reason_text().contains("Alley Patrol"), "the banner names the locking operation")
+	var retry := banner.retry_button()
+	assert_true(retry != null and retry.visible, "the locked rule offers Retry")
+	var retry_requests: Array = []
+	screen.auto_repeat_retry_requested.connect(func() -> void: retry_requests.append(true))
+	retry.pressed.emit()
+	assert_eq(retry_requests.size(), 1, "the team banner forwards one Retry request")
+
+	# Retry may not steal the slot or schedule a second job while it is locked.
+	var blocked := AutoRepeat.resume(state, pack, 1000)
+	assert_false(blocked.get("ok", true), "a locked retry does not start")
+	assert_eq(state.assignments.size(), 1, "only the blocking job is running")
+	screen.refresh(pack, state)
+	assert_eq(banner.status_code(), Simulation.ERROR_AGENT_BUSY, "the lock reason survives the retry")
+	assert_true(banner.reason_text().contains("Alley Patrol"), "the retried banner still names the lock")
+	assert_true(retry.visible, "Retry stays available while still locked")
 
 	Simulation.simulate_delta(state, 30.0, pack)
 	var resumed := AutoRepeat.resume(state, pack, 1030)
@@ -319,6 +358,7 @@ func test_team_auto_repeat_banner_names_a_locked_slot_and_recovers() -> void:
 	assert_false(banner.reason_text().contains("Alley Patrol"), "the previous lock is gone")
 	assert_false(banner.reason_text().contains("locked"), "the rule's own job is not called paused")
 	assert_true(banner.status_text().contains("Waiting"), "the recovered rule is shown as running")
+	assert_false(retry.visible, "Retry is hidden after the rule starts")
 	screen.free()
 
 

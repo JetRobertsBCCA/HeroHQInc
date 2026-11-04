@@ -168,6 +168,18 @@ through the save file):
   and a reserve on the roster showed `Paused · Joint Raid` / `Slot 2: the saved
   hero is no longer on the roster.` No operation was scheduled, the reserve was
   not substituted, and 500 Credits / 0 tasks / the rule stayed on disk
+- paused Retry (solo rating): the same 500 Credits / Lv 3 / 240 XP / rating 110
+  save showed `Paused · Rooftop Pursuit`, `Available rating 110 / 120`, and a
+  full-width Retry button on Missions. Tapping Retry left the save unchanged —
+  500 Credits / 0 tasks / no assignments / Lv 3 / 240 XP — and the same reason
+  remained. One Train (49 Credits) then took it to 451 Credits / Lv 4 / 0 XP /
+  rating 130; the existing automatic retry started `task_1` Rooftop Pursuit, and
+  Missions changed to `Waiting · Rooftop Pursuit` with Retry hidden.
+- paused Retry (locked slot): 500 Credits / 0 tasks, Support on `task_1` Alley
+  Patrol, and a Joint Raid rule for `[Volt, Support]` showed `Paused · Joint
+  Raid` / `Slot 2: Support is locked to Alley Patrol.` and Retry. Tapping Retry
+  left only `task_1` running, with 500 Credits / 0 tasks, the rule and the
+  Support lock intact; no second assignment was created.
 
 The rebirth test used a hand-seeded save (level and lifetime written into the
 profile) because reaching level 7 takes far longer than a scripted device run.
@@ -215,6 +227,16 @@ Everything else was played through the UI.
   control with the finger, so the touch release still landed on it; a drag from
   a slot opened that slot's chooser. `TouchScroll` now also swallows the mouse
   release Godot emulates from touch, and a drag scrolls without choosing.
+
+## Remaining device test gap
+
+The successful manual Retry tap is headless-only. Every normal recovery path —
+training, recruitment, settlement and launch — also runs the automatic retry in
+the same event that makes the rule eligible, so the rule has already started
+before a finger can reach the button. Headless tests call the exact Retry path
+and assert one assignment, no payout and the saved lineup; the device pass proves
+the button appears while blocked, a tap does not bypass the reason, and the
+blocked-to-recovered state through the automatic path.
 
 ## Not done
 

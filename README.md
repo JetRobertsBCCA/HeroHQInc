@@ -60,8 +60,8 @@ recruitment, a research purchase and a two-step rebirth. Seeded offline saves
 settled a due operation once across force-stop/relaunch, instant training
 persisted, and persisted auto-repeat re-armed after settlement while closed;
 squad automation kept its exact lineup across reloads. A live banner on Missions
-and Teams explains a blocked rule by slot, job, rating or role, and clears when
-the rule starts. Use
+and Teams explains a blocked rule by slot, job, rating or role, offers Retry for
+an immediate recheck, and clears when the rule starts. Use
 `-gpu host`; the software renderer cannot link Godot's canvas shader and shows a
 black screen.
 
@@ -98,7 +98,8 @@ with 50 Credits, which is enough for one training session and no more.
    automation rank is owned, the remembered operation is re-armed once after
    that settlement. Missions and Teams show its live state: `Waiting` while an
    operation runs, or `Paused` with the exact slot, job, rating or role that is
-   blocking it. Training or recruiting retries a recovered rule immediately.
+   blocking it. Training or recruiting retries a recovered rule immediately;
+   a paused rule also offers Retry to recheck without waiting for settlement.
 
 Measured with `tooling/balance_report.gd`, one greedy agent — the model recruits
 nobody, so this is a lower bound — plays **2 hours**, completes **68**
@@ -165,8 +166,8 @@ Recruitment can target a role, HQ names the next objective, and Upgrades spends
 Intel on payout and training research plus an automation rank that repeats the
 last operation once per completion, including after a relaunch; a squad keeps
 its exact saved lineup and waits rather than substituting a missing or busy
-member. A live banner explains why a configured rule cannot start and clears as
-soon as one of its inputs changes. The Teams tab
+member. A live banner explains why a configured rule cannot start, offers Retry
+for a paused rule, and clears as soon as one of its inputs changes. The Teams tab
 previews every squad operation against the current roster: the members, their individual and average ratings
 against the gate, any missing role, and the exact blocking reason when it cannot
 deploy. A lineup can be saved per operation, updated after training, or cleared

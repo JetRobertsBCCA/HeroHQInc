@@ -134,6 +134,7 @@ func _on_tab_selected(tab_id: String) -> void:
 		_task_board = TaskBoard.new()
 		_task_board.name = "TaskBoard"
 		_task_board.deploy_requested.connect(_on_deploy_requested)
+		_task_board.auto_repeat_retry_requested.connect(_on_auto_repeat_retry_requested)
 		_task_board.refresh(_pack, _state, _clock.now_utc())
 		_shell.set_content(_task_board)
 		return
@@ -142,6 +143,7 @@ func _on_tab_selected(tab_id: String) -> void:
 		_teams.name = "TeamScreen"
 		_teams.deploy_requested.connect(_on_squad_deploy_requested)
 		_teams.squads_changed.connect(_on_squads_changed)
+		_teams.auto_repeat_retry_requested.connect(_on_auto_repeat_retry_requested)
 		_teams.refresh(_pack, _state)
 		_shell.set_content(_teams)
 		return
@@ -292,6 +294,14 @@ func _on_research_requested(branch_id: String) -> void:
 		int(result["rank"]),
 	])
 	SaveService.save_state(_state)
+	_refresh_content()
+
+
+## Explicit Retry from the paused banner. The guarded resume re-evaluates the
+## live roster, starts at most one operation, and never pays a completion by
+## itself; if the rule is still blocked, the refreshed banner keeps the reason.
+func _on_auto_repeat_retry_requested() -> void:
+	_maybe_auto_repeat(_clock.now_utc())
 	_refresh_content()
 
 

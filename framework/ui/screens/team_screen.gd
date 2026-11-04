@@ -17,6 +17,7 @@ extends Control
 
 signal deploy_requested(task_id: String, agent_ids: Array)
 signal squads_changed()
+signal auto_repeat_retry_requested
 
 const MIN_TAP_HEIGHT := 48
 const SLOT_OPTION_HEIGHT := 44
@@ -182,6 +183,7 @@ func _ensure_built() -> void:
 
 	_auto_repeat = AutoRepeatBanner.new()
 	_auto_repeat.name = "AutoRepeat"
+	_auto_repeat.retry_requested.connect(func() -> void: auto_repeat_retry_requested.emit())
 	_root.add_child(_auto_repeat)
 
 	var heading := Label.new()

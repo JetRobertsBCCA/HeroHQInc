@@ -6,12 +6,15 @@ extends PanelContainer
 ## cached in the save, so a reason cannot outlive the roster or activity state
 ## that produced it. The card is only visible while a rule is configured.
 
+signal retry_requested
+
 var _pack: GamePack
 var _state: GameState
 var _snapshot: Dictionary = {}
 var _title: Label
 var _status_label: Label
 var _reason_label: Label
+var _retry: Button
 
 
 ## Recomputes the card. A hidden card also clears its labels so tests and screen
@@ -25,6 +28,7 @@ func refresh(pack: GamePack, state: GameState) -> void:
 	if not visible:
 		_status_label.text = ""
 		_reason_label.text = ""
+		_retry.visible = false
 		return
 
 	_title.text = _pack.label("ui.auto_repeat_title", "Auto-repeat")
@@ -49,6 +53,11 @@ func refresh(pack: GamePack, state: GameState) -> void:
 		_status_label.add_theme_color_override("font_color", ThemeTokens.color(_pack, "warning"))
 		_reason_label.add_theme_color_override("font_color", ThemeTokens.color(_pack, "warning"))
 
+	# Retry is an explicit action only for a paused rule. While armed there is
+	# nothing to retry, and while waiting the remembered job is already running.
+	_retry.text = _pack.label("ui.auto_repeat_retry", "Retry")
+	_retry.visible = not code.is_empty() and code != AutoRepeat.CODE_BUSY
+
 
 func task_id() -> String:
 	return str(_snapshot.get("task_id", ""))
@@ -68,6 +77,10 @@ func reason_text() -> String:
 
 func snapshot() -> Dictionary:
 	return _snapshot.duplicate(true)
+
+
+func retry_button() -> Button:
+	return _retry
 
 
 func _ensure_built() -> void:
@@ -91,6 +104,15 @@ func _ensure_built() -> void:
 	_reason_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_reason_label.add_theme_font_size_override("font_size", 11)
 	column.add_child(_reason_label)
+
+	_retry = Button.new()
+	_retry.name = "Retry"
+	_retry.text = _pack.label("ui.auto_repeat_retry", "Retry")
+	_retry.custom_minimum_size = Vector2(0, 48)
+	_retry.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_retry.visible = false
+	_retry.pressed.connect(func() -> void: retry_requested.emit())
+	column.add_child(_retry)
 
 
 func _waiting_reason() -> String:

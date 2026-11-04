@@ -176,6 +176,56 @@ func test_status_reports_rating_role_and_count_refusals() -> void:
 	assert_eq(int(repeated.get("slot_index", -1)), 1, "the status names the repeated slot")
 
 
+func test_retry_rechecks_a_missing_member_and_starts_one_job() -> void:
+	var pack := _pack()
+	var state := _settled_state(pack)
+	AutoRepeat.remember(state, TASK_ID, _lineup())
+	var support: Dictionary = state.agents["test_support"].duplicate(true)
+	state.agents.erase("test_support")
+	var credits := state.resource("credits")
+	var tasks := state.tasks_completed()
+	var blocked := AutoRepeat.resume(state, pack, 1120)
+	assert_false(blocked.get("ok", true), "retry refuses the missing member")
+	assert_eq(state.assignments.size(), 0, "a refused retry schedules nothing")
+	assert_eq(state.resource("credits"), credits, "a refused retry pays nothing")
+	assert_eq(state.tasks_completed(), tasks, "a refused retry completes nothing")
+	assert_eq(AutoRepeat.lineup(state), _lineup(), "a refused retry keeps the lineup")
+
+	state.agents["test_support"] = support
+	var retried := AutoRepeat.resume(state, pack, 1121)
+	assert_true(retried.get("ok", false), "retry starts once the member is back")
+	assert_eq(state.assignments.size(), 1, "recovery schedules exactly one job")
+	var assignment: Dictionary = state.assignments.values()[0]
+	assert_eq(str(assignment.get("task_id", "")), TASK_ID, "the intended operation starts")
+	assert_eq(assignment.get("agent_ids", []), _lineup(), "the exact saved lineup starts")
+	assert_eq(state.resource("credits"), credits, "starting the rule pays nothing up front")
+	assert_eq(state.tasks_completed(), tasks, "starting the rule completes nothing")
+
+	var again := AutoRepeat.resume(state, pack, 1121)
+	assert_false(again.get("ok", true), "a second retry waits for the started job")
+	assert_eq(str(again.get("code", "")), AutoRepeat.CODE_BUSY, "the second retry names the running job")
+	assert_eq(state.assignments.size(), 1, "a repeated retry cannot schedule a second job")
+
+
+func test_retry_does_not_bypass_a_locked_slot() -> void:
+	var pack := _pack()
+	var state := _settled_state(pack)
+	AutoRepeat.remember(state, TASK_ID, _lineup())
+	var deployed := Simulation.assign_task(state, pack, "s_alley", ["test_support"], 1120)
+	assert_true(deployed.get("ok", false), "the support can be locked to another job")
+	var credits := state.resource("credits")
+	var tasks := state.tasks_completed()
+	var blocked := AutoRepeat.resume(state, pack, 1120)
+	assert_false(blocked.get("ok", true), "retry refuses the locked slot")
+	assert_eq(str(blocked.get("code", "")), Simulation.ERROR_AGENT_BUSY, "the refusal names the lock")
+	assert_eq(state.assignments.size(), 1, "retry does not add a second assignment")
+	var blocking: Dictionary = state.assignments.values()[0]
+	assert_eq(str(blocking.get("task_id", "")), "s_alley", "the original blocking job survives")
+	assert_eq(state.resource("credits"), credits, "a locked retry pays nothing")
+	assert_eq(state.tasks_completed(), tasks, "a locked retry completes nothing")
+	assert_eq(AutoRepeat.lineup(state), _lineup(), "a locked retry keeps the saved lineup")
+
+
 func test_a_removed_operation_is_forgotten_instead_of_left_stale() -> void:
 	var pack := _pack()
 	var state := _state(pack)

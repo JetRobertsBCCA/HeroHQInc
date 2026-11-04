@@ -3,6 +3,75 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.11 — Retry a paused auto-repeat (2026-11-04)
+
+Status: complete; headless and Android 35 emulator verified, with the successful
+manual Retry tap covered headlessly (see the device gap below).
+
+### What was wrong
+
+M1.10 made a blocked auto-repeat rule explain itself, but the player could only
+wait. There was no action to force a fresh eligibility check after fixing a
+blocker, and the paused card offered nothing to press. A rule that recovered
+through training, recruitment, launch or settlement was usually restarted by an
+automatic trigger, but that trigger was implicit and gave no feedback about the
+manual path.
+
+### What changed
+
+- `AutoRepeatBanner` now renders a full-width **Retry** button while a rule is
+  paused. It is hidden when the rule is armed or already waiting, so the button
+  never claims an action is available when there is nothing to retry.
+- `TaskBoard` and `TeamScreen` forward `auto_repeat_retry_requested`; the game
+  app handles it by calling the same guarded `AutoRepeat.resume`, saving, and
+  rebuilding the current tab.
+- Retry re-evaluates live rating, roles, slots, assignments and saved lineup. It
+  never settles a task, pays a reward, assigns directly or rewrites the lineup.
+  A refusal keeps the rule and its current reason; a second request while the
+  replacement is running refuses as `Waiting`.
+- The visible copy comes from `ui.auto_repeat_retry`, with a game-neutral
+  fallback in the shared banner.
+
+### Checks
+
+- 110/110 tests (108 before), validator `OK hero_hq`, `playthrough_demo.gd` PASS,
+  `git diff --check` clean.
+- Two new core cases: a missing member refuses Retry without changing Credits,
+  tasks or assignments, then a recovered member starts exactly one job with the
+  saved lineup; a locked slot refuses Retry without adding a second assignment.
+- Screen coverage asserts the button is visible only while paused, forwards one
+  request, keeps the same reason after a refused retry, hides while armed, and
+  hides once the replacement is running.
+- Android 35 x86_64, controlled saves, host clock untouched:
+  - Solo rating block: 500 Credits / Lv 3 / 240 XP / rating 110 / no assignments
+    showed `Paused · Rooftop Pursuit`, `Available rating 110 / 120`, and Retry.
+    Tapping Retry left the save unchanged: 500 Credits / 0 tasks / no
+    assignments / Lv 3 / 240 XP, and the same banner remained.
+  - One Train (49 Credits) took the save to 451 Credits / Lv 4 / 0 XP / rating
+    130. The existing automatic retry then started `task_1` `s_rooftop`; Missions
+    showed `Waiting · Rooftop Pursuit`, and Retry disappeared.
+  - Locked slot: 500 Credits / 0 tasks, Support on `task_1` Alley Patrol, rule
+    `[Volt, Support]` for Joint Raid showed `Paused · Joint Raid` / `Slot 2:
+    Support is locked to Alley Patrol.` and Retry. Tapping Retry left only
+    `task_1` running, with 500 Credits / 0 tasks, the rule and the Support lock
+    intact; no `task_2` was created.
+
+### Known limitations
+
+- Emulator only; physical phone, release signing and icon remain.
+- The successful manual Retry tap was not isolated on the emulator. Training,
+  recruitment, settlement and launch all run the existing automatic retry in
+  same event that makes the rule eligible, so it starts before the player can
+  reach the button. The exact Retry call, one-job cap and no-payout behaviour are
+  covered headlessly; the device pass covers the visible button, a refused retry
+  and blocked-to-recovered through the automatic path.
+- Retry cannot cancel the operation holding a slot or change a saved lineup. It
+  only rechecks the current state, so the same reason remains until that state
+  changes.
+- The button is on Missions and Teams only, matching the status card.
+- Role, count, duplicate and removed-operation retry messages are covered
+  headlessly rather than individually on the emulator.
+
 ## M1.10 — Auto-repeat blockers are visible (2026-11-04)
 
 Status: complete; headless and Android 35 emulator verified.
@@ -68,8 +137,8 @@ UI needed for a specific message.
   covered headlessly.
 - A missing member is a controlled save case; normal gameplay has no roster
   removal, so this is a legacy/corrupt-save recovery path.
-- Recovery is automatic on training, recruitment, launch or settlement. There is
-  no separate manual Retry control.
+- Recovery is automatic on training, recruitment, launch or settlement. M1.11
+  adds an explicit Retry control for a paused rule.
 - The status card is shown on Missions and Teams; HQ and Heroes do not duplicate
   it.
 

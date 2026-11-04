@@ -6,6 +6,7 @@ extends Control
 ## from the pack, and every block reason is a locale key the pack provides.
 
 signal deploy_requested(task_id: String)
+signal auto_repeat_retry_requested
 
 const MIN_TAP_HEIGHT := 48
 
@@ -114,6 +115,7 @@ func _ensure_built() -> void:
 
 	_auto_repeat = AutoRepeatBanner.new()
 	_auto_repeat.name = "AutoRepeat"
+	_auto_repeat.retry_requested.connect(func() -> void: auto_repeat_retry_requested.emit())
 	_root.add_child(_auto_repeat)
 
 	_active_heading = _heading()

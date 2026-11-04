@@ -110,6 +110,7 @@
 	"ui.auto_repeat_armed": "Armed · %s",
 	"ui.auto_repeat_waiting": "Waiting · %s",
 	"ui.auto_repeat_paused": "Paused · %s",
+	"ui.auto_repeat_retry": "Retry",
 	"ui.auto_repeat_ready_reason": "Starts automatically when no operation is running.",
 	"ui.auto_repeat_waiting_reason": "Waiting for the current operation to finish.",
 	"ui.auto_repeat_waiting_one": "Starts when %s finishes.",
