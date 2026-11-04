@@ -87,6 +87,22 @@ func test_rebirth_banks_chips_and_resets_the_run() -> void:
 	state.resources["credits"] = 5000.0
 	state.stats["tasks_completed"] = 12
 
+	# A hired hero must survive the reset at its base shape, not be deleted.
+	var base_attributes: Dictionary = {}
+	for attribute in Recruitment.attribute_names(pack):
+		base_attributes[str(attribute)] = 4
+	state.agents["op_0001"] = {
+		"id": "op_0001",
+		"role_id": str(pack.roles.keys()[0]),
+		"level": 1,
+		"xp": 0,
+		"activity": "assigned",
+		"attributes": base_attributes.duplicate(true),
+	}
+	state.agents["op_0001"]["xp"] = 100000.0
+	AgentRules.apply_level_ups(state, pack, "op_0001")
+	assert_true(int(state.agents["op_0001"]["level"]) > 1, "the test recruit levelled up")
+
 	var result := Prestige.rebirth(state, pack, 1500)
 	assert_true(result.get("ok", false), "an eligible save can be rebirthed")
 	assert_eq(int(result["gained"]), banked, "the pending chips are banked")
@@ -97,6 +113,13 @@ func test_rebirth_banks_chips_and_resets_the_run() -> void:
 	assert_eq(state.assignments.size(), 0, "running assignments are cleared")
 	assert_eq(int(state.agents["hero_volt"]["level"]), 1, "agent progress resets")
 	assert_eq(str(state.agents["hero_volt"]["activity"]), "available", "the reset roster is usable")
+	assert_true(state.agents.has("op_0001"), "a recruited hero survives the reset")
+	assert_eq(int(state.agents["op_0001"]["level"]), 1, "the recruited hero returns at level one")
+	assert_eq(int(state.agents["op_0001"]["xp"]), 0, "the recruited hero loses run XP")
+	assert_eq(str(state.agents["op_0001"]["activity"]), "available", "the recruited hero is usable")
+	assert_eq(
+		state.agents["op_0001"]["attributes"], base_attributes, "attributes rewind to base values"
+	)
 	assert_eq(state.last_settled_utc, 1500, "settlement restarts at the rebirth instant")
 	assert_eq(state.stats.get("tasks_completed", 0), 12, "lifetime totals survive the reset")
 	assert_eq(state.earned_total("credits"), THRESHOLD, "lifetime earnings survive the reset")
