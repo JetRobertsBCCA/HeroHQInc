@@ -32,6 +32,9 @@ godot --headless --path . -s res://tooling/balance_report.gd
 
 # play seven days with rebirth, and fail if any wait exceeds the boredom budget
 godot --headless --path . -s res://tooling/long_run_report.gd
+
+# play the whole game through the real UI, then restore your save
+godot --headless --path . -s res://tooling/playthrough_demo.gd
 ```
 
 Downloads for the pinned engine: <https://godotengine.org/download/linux/>.
