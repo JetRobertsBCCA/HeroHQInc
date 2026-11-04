@@ -53,6 +53,33 @@ static func is_available(agent: Dictionary) -> bool:
 	return str(agent.get("activity", "available")) == "available"
 
 
+## Rewinds an agent to its level-one shape: base attributes, no XP, available.
+##
+## Growth is applied linearly per level, so subtracting the same growth per level
+## gained restores the exact starting attributes without storing a second copy.
+## Used by rebirth, where the roster survives but run progress must not.
+static func reset_progress(agent: Dictionary, pack: GamePack) -> void:
+	var level := maxi(int(agent.get("level", 1)), 1)
+	var gained := level - 1
+	var value: Variant = agent.get("attributes", {})
+	if gained > 0 and value is Dictionary:
+		var attributes: Dictionary = value
+		var growth: Dictionary = pack.role(str(agent.get("role_id", ""))).get("growth", {})
+		if growth.is_empty():
+			var flat := int(pack.leveling.get("attribute_gain_per_level", DEFAULT_ATTRIBUTE_GAIN))
+			for key in attributes.keys():
+				attributes[key] = int(attributes[key]) - flat * gained
+		else:
+			for key in growth.keys():
+				var key_text := str(key)
+				if attributes.has(key_text):
+					attributes[key_text] = int(attributes[key_text]) - int(growth[key]) * gained
+		agent["attributes"] = attributes
+	agent["level"] = 1
+	agent["xp"] = 0
+	agent["activity"] = "available"
+
+
 ## Adds XP and applies every level-up it unlocks, in order.
 ## Returns [{type: "level_up", agent_id, level}] so callers can report it.
 static func add_xp(state: GameState, pack: GamePack, agent_id: String, amount: float) -> Array:

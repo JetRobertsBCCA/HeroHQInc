@@ -167,7 +167,12 @@ static func rebirth(state: GameState, pack: GamePack, utc_now: int) -> Dictionar
 static func _reset_run(state: GameState, pack: GamePack, utc_now: int) -> void:
 	state.resources = pack.starting_resources.duplicate(true)
 	state.assignments.clear()
-	state.agents.clear()
+	# The roster is a collection, not run progress: every recruited agent survives
+	# and is rewound to its base shape. Starter agents are reseeded only if missing.
+	for agent_id in state.agents.keys():
+		var agent: Variant = state.agents[agent_id]
+		if agent is Dictionary:
+			AgentRules.reset_progress(agent as Dictionary, pack)
 	Simulation.seed_missing_starter_agents(state, pack)
 	state.stats["run_tasks_completed"] = 0
 	# Reset the settlement stamp so time before the rebirth is not paid twice.
