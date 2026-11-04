@@ -19,6 +19,7 @@ var _available_list: VBoxContainer
 ## assignment_id -> countdown Label, refreshed every tick without rebuilding.
 var _countdowns: Dictionary = {}
 var _deploy_buttons: Dictionary = {}
+var _auto_repeat: AutoRepeatBanner
 var _utc_now: int = 0
 
 
@@ -37,11 +38,16 @@ func deploy_button(task_id: String) -> Button:
 	return null
 
 
+func auto_repeat_banner() -> AutoRepeatBanner:
+	return _auto_repeat
+
+
 func refresh(pack: GamePack, state: GameState, utc_now: int) -> void:
 	_pack = pack
 	_state = state
 	_utc_now = utc_now
 	_ensure_built()
+	_auto_repeat.refresh(pack, state)
 	_clear(_active_list)
 	_clear(_available_list)
 	_countdowns.clear()
@@ -105,6 +111,10 @@ func _ensure_built() -> void:
 	_root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_root.add_theme_constant_override("separation", 10)
 	scroll.add_child(_root)
+
+	_auto_repeat = AutoRepeatBanner.new()
+	_auto_repeat.name = "AutoRepeat"
+	_root.add_child(_auto_repeat)
 
 	_active_heading = _heading()
 	_root.add_child(_active_heading)

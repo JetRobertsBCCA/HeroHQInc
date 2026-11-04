@@ -28,6 +28,7 @@ var _pack: GamePack
 var _state: GameState
 var _root: VBoxContainer
 var _list: VBoxContainer
+var _auto_repeat: AutoRepeatBanner
 var _deploy_buttons: Dictionary = {}
 var _save_buttons: Dictionary = {}
 var _clear_buttons: Dictionary = {}
@@ -48,6 +49,10 @@ func squad_row_count() -> int:
 
 func deploy_button(task_id: String) -> Button:
 	return _button(_deploy_buttons, task_id)
+
+
+func auto_repeat_banner() -> AutoRepeatBanner:
+	return _auto_repeat
 
 
 func save_button(task_id: String) -> Button:
@@ -131,6 +136,7 @@ func refresh(pack: GamePack, state: GameState) -> void:
 	_pack = pack
 	_state = state
 	_ensure_built()
+	_auto_repeat.refresh(pack, state)
 	_clear(_list)
 	_deploy_buttons.clear()
 	_save_buttons.clear()
@@ -173,6 +179,10 @@ func _ensure_built() -> void:
 	_root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_root.add_theme_constant_override("separation", 8)
 	scroll.add_child(_root)
+
+	_auto_repeat = AutoRepeatBanner.new()
+	_auto_repeat.name = "AutoRepeat"
+	_root.add_child(_auto_repeat)
 
 	var heading := Label.new()
 	heading.text = _pack.label("ui.squad_operations", "Squad operations")

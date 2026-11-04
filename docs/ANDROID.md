@@ -152,6 +152,22 @@ through the save file):
   remembered rule banked 4 chips, reset agents to level 1 and Credits to 50,
   cleared the assignment and `automation_rules`, and kept the squad preset and
   research rank
+- visible solo rating block: 500 Credits / Lv 3 / 240 XP / rating 110 showed
+  `Paused · Rooftop Pursuit` and `Available rating 110 / 120` on Missions. One
+  Train (49 Credits) reached Lv 4 / rating 130; the rule immediately deployed
+  `task_1` Rooftop Pursuit, and the banner changed to `Waiting · Rooftop
+  Pursuit` / `Starts when Rooftop Pursuit finishes.` The save read 451 Credits /
+  Lv 4 / 0 XP / one assignment
+- visible locked squad slot: Support on `task_1` Alley Patrol produced
+  `Paused · Joint Raid` / `Slot 2: Support is locked to Alley Patrol.` When the
+  other job finished naturally (18 Credits / 8 XP / 1 task), the rule re-armed
+  `task_2` Joint Raid on the saved lineup and the banner changed to `Waiting ·
+  Joint Raid` / `Starts when Joint Raid finishes.` Save: 518 Credits / 1 task /
+  both agents locked to `task_2`
+- visible missing squad member: a rule naming `[Volt, Support]` with only Volt
+  and a reserve on the roster showed `Paused · Joint Raid` / `Slot 2: the saved
+  hero is no longer on the roster.` No operation was scheduled, the reserve was
+  not substituted, and 500 Credits / 0 tasks / the rule stayed on disk
 
 The rebirth test used a hand-seeded save (level and lifetime written into the
 profile) because reaching level 7 takes far longer than a scripted device run.
@@ -159,6 +175,11 @@ Everything else was played through the UI.
 
 ## Device bugs found and fixed by this pass
 
+- **Auto-repeat called its own replacement paused.** After a squad rule
+  re-armed, the new job locked both saved members, and the first status pass
+  reported `Paused` with both slots “locked to” that same job. `AutoRepeat.status`
+  now recognises an active assignment for the remembered task first and reports
+  `Waiting`; only a lock from a different job is a pause reason.
 - **Squad auto-repeat ignored the saved lineup.** Resume went through
   `Simulation.deploy`, which auto-selects the strongest free agents, so a
   stronger reserve could replace the player's chosen member. Rules now store

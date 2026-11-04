@@ -57,17 +57,38 @@ func test_resume_needs_the_research_and_forgets_a_locked_rule() -> void:
 	var state := _state(pack)
 	state.upgrades.erase(AUTOMATION_BRANCH)
 	AutoRepeat.remember(state, "s_alley")
+	assert_eq(
+		str(AutoRepeat.status(state, pack).get("code", "")),
+		AutoRepeat.CODE_LOCKED,
+		"the status names the missing research",
+	)
 	var result := AutoRepeat.resume(state, pack, 1000)
 	assert_false(result.get("ok", true), "automation is inert without the research")
 	assert_eq(str(result.get("code", "")), AutoRepeat.CODE_LOCKED, "the reason is the missing research")
 	assert_eq(AutoRepeat.task_id(state), "", "the stale rule is dropped")
 
 
-func test_a_task_the_roster_cannot_field_is_forgotten() -> void:
+func test_an_under_rated_solo_rule_is_kept_and_reports_its_reason() -> void:
 	var pack := _pack()
 	var state := _state(pack)
 	AutoRepeat.remember(state, "s_rooftop")
 	var result := AutoRepeat.resume(state, pack, 1000)
 	assert_false(result.get("ok", true), "an under-rated task does not deploy")
 	assert_eq(state.assignments.size(), 0, "nothing is scheduled on a refusal")
-	assert_eq(AutoRepeat.task_id(state), "", "the unusable rule is dropped")
+	assert_eq(AutoRepeat.task_id(state), "s_rooftop", "the recoverable rule is kept")
+	var status := AutoRepeat.status(state, pack)
+	assert_eq(
+		str(status.get("code", "")),
+		Simulation.ERROR_RATING_TOO_LOW,
+		"the status names the rating gate",
+	)
+	assert_true(float(status.get("rating", 0.0)) < float(status.get("required_rating", 0.0)), "the status carries both ratings")
+
+	# Training the roster past the gate makes the same rule deploy immediately.
+	state.agents["hero_volt"]["attributes"] = {"power": 10, "speed": 10, "skill": 10}
+	var recovered := AutoRepeat.status(state, pack)
+	assert_true(recovered.get("ok", false), "the rule becomes ready after training")
+	assert_eq(str(recovered.get("code", "")), "", "a ready rule has no block code")
+	var deployed := AutoRepeat.resume(state, pack, 1000)
+	assert_true(deployed.get("ok", false), "the recovered rule starts")
+	assert_eq(state.assignments.size(), 1, "one operation is scheduled after recovery")

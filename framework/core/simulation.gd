@@ -110,29 +110,41 @@ static func evaluate_assignment(
 		return _problem(ERROR_UNKNOWN_TASK, "Task '%s' is not part of this pack." % task_id)
 	var task: Dictionary = pack.missions[task_id]
 	var required_count := maxi(int(task.get("required_agent_count", 1)), 1)
-	if agent_ids.size() < required_count:
+	if agent_ids.size() != required_count:
 		return _problem(
 			ERROR_AGENT_COUNT,
 			"Task '%s' needs %d agent(s), %d given." % [task_id, required_count, agent_ids.size()],
-		)
-	if agent_ids.size() > required_count:
-		return _problem(
-			ERROR_AGENT_COUNT,
-			"Task '%s' takes exactly %d agent(s), %d given." % [task_id, required_count, agent_ids.size()],
+			{"required_agent_count": required_count, "given_agent_count": agent_ids.size()},
 		)
 	var seen: Dictionary = {}
 	var assigned_roles: Dictionary = {}
 	var rating_total := 0.0
-	for raw_id in agent_ids:
-		var agent_id := str(raw_id)
+	for index in agent_ids.size():
+		var agent_id := str(agent_ids[index])
 		if seen.has(agent_id):
-			return _problem(ERROR_UNKNOWN_AGENT, "Agent '%s' was listed twice." % agent_id)
+			return _problem(
+				ERROR_UNKNOWN_AGENT,
+				"Agent '%s' was listed twice." % agent_id,
+				{"agent_id": agent_id, "slot_index": index, "duplicate": true},
+			)
 		seen[agent_id] = true
 		if not state.agents.has(agent_id):
-			return _problem(ERROR_UNKNOWN_AGENT, "Agent '%s' is not in this save." % agent_id)
+			return _problem(
+				ERROR_UNKNOWN_AGENT,
+				"Agent '%s' is not in this save." % agent_id,
+				{"agent_id": agent_id, "slot_index": index},
+			)
 		var agent: Dictionary = state.agents[agent_id]
 		if not AgentRules.is_available(agent):
-			return _problem(ERROR_AGENT_BUSY, "Agent '%s' is already assigned." % agent_id)
+			return _problem(
+				ERROR_AGENT_BUSY,
+				"Agent '%s' is already assigned." % agent_id,
+				{
+					"agent_id": agent_id,
+					"slot_index": index,
+					"assignment_id": str(agent.get("assignment_id", "")),
+				},
+			)
 		assigned_roles[str(agent.get("role_id", ""))] = true
 		rating_total += AgentRules.rating_value(agent)
 
@@ -143,6 +155,7 @@ static func evaluate_assignment(
 				return _problem(
 					ERROR_MISSING_ROLE,
 					"Task '%s' requires role '%s'." % [task_id, str(role_id)],
+					{"role_id": str(role_id)},
 				)
 
 	var required_rating := float(task.get("minimum_rating", 0))
@@ -377,5 +390,15 @@ static func _compare_candidates(a: Dictionary, b: Dictionary) -> bool:
 	return str(a["id"]) < str(b["id"])
 
 
-static func _problem(code: String, details: String) -> Dictionary:
-	return {"ok": false, "code": code, "details": details, "rating": 0.0, "required_rating": 0.0}
+static func _problem(code: String, details: String, extra: Dictionary = {}) -> Dictionary:
+	var problem := {
+		"ok": false,
+		"code": code,
+		"details": details,
+		"rating": 0.0,
+		"required_rating": 0.0,
+		"required_agent_count": 0,
+		"given_agent_count": 0,
+	}
+	problem.merge(extra, true)
+	return problem

@@ -112,8 +112,8 @@ func _on_tick() -> void:
 		if not events.is_empty():
 			_record_events(events)
 			SaveService.save_state(_state)
-			_refresh_content()
 			_maybe_auto_repeat(now)
+			_refresh_content()
 		else:
 			_shell.refresh(_state)
 			if _tick_count % SAVE_EVERY_TICKS == 0:
@@ -201,6 +201,9 @@ func _on_train_requested(agent_id: String) -> void:
 		return
 	_record_events(result.get("events", []))
 	SaveService.save_state(_state)
+	# Training can cross a saved lineup's rating gate; retry immediately so the
+	# banner moves from Paused to Armed without waiting for another completion.
+	_maybe_auto_repeat(_clock.now_utc())
 	_refresh_content()
 
 
@@ -221,6 +224,7 @@ func _on_recruit_requested(role_id: String) -> void:
 		str(result["name"]),
 	])
 	SaveService.save_state(_state)
+	_maybe_auto_repeat(_clock.now_utc())
 	_refresh_content()
 
 
@@ -300,12 +304,11 @@ func _maybe_auto_repeat(now: int) -> void:
 		return
 	var result := AutoRepeat.resume(_state, _pack, now)
 	if not result.get("ok", false):
-		# A locked or unusable rule is dropped by resume(); persist that.
+		# A locked or removed task is dropped by resume(); persist that. Any
+		# other refusal keeps the rule so the screen can explain it.
 		SaveService.save_state(_state)
 		return
 	SaveService.save_state(_state)
-	if _shell != null:
-		_refresh_content()
 
 
 func _build_hq_content() -> Control:

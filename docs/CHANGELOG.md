@@ -3,6 +3,76 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.10 — Auto-repeat blockers are visible (2026-11-04)
+
+Status: complete; headless and Android 35 emulator verified.
+
+### What was wrong
+
+Auto-repeat could keep a rule for a missing, busy, under-rated or role-incomplete
+lineup, but the game showed nothing: the player saw an idle screen and had to
+guess why the remembered operation never started. A solo rule that failed its
+rating gate was worse — resume discarded it, so there was no state left to
+explain. Eligibility results also lacked the slot, role and rating context the
+UI needed for a specific message.
+
+### What changed
+
+- `AutoRepeat.status()` returns a side-effect-free snapshot of the configured
+  rule: ready, waiting for a running operation, or paused with a `Simulation`
+  error code, current rating, required rating, blocked slots and missing roles.
+- Recoverable solo and squad failures keep the rule. Only a missing research
+  effect or an operation removed from the pack clears it, so a stale reason
+  cannot remain forever.
+- `AutoRepeatBanner` renders the snapshot on Missions and Teams. It names the
+  operation, saved slot and locking job; messages are pack locale strings, so
+  the shared framework stays title-neutral.
+- A rule whose own replacement is running reads as `Waiting`, not `Paused`,
+  even though that job locks both saved squad slots. A genuine lock elsewhere
+  still names the operation holding the member.
+- `App` retries after training and recruitment as well as launch and settlement,
+  so a recovered rating gate starts the rule immediately instead of waiting for
+  another completion.
+- `Simulation` eligibility results now carry `slot_index`, `agent_id`,
+  `assignment_id`, `role_id`, `duplicate`, and required/given agent counts.
+
+### Checks
+
+- 108/108 tests (103 before), validator `OK hero_hq`, `playthrough_demo.gd` PASS.
+- New headless coverage: solo rating block and recovery, missing-member status
+  and slot, active-job lock, role/count refusals, removed operation, and banner
+  refresh/clear on both Missions and Teams.
+- Android 35 x86_64, controlled saves, host clock untouched:
+  - Solo rating: 500 Credits / Lv 3 / 240 XP / rating 110 showed
+    `Paused · Rooftop Pursuit` and `Available rating 110 / 120`. One Train
+    (49 Credits) reached Lv 4 / rating 130; the rule immediately deployed
+    `task_1` `s_rooftop`, and the banner changed to
+    `Waiting · Rooftop Pursuit / Starts when Rooftop Pursuit finishes.` The
+    disk save was 451 Credits / Lv 4 / 0 XP / one assignment.
+  - Locked slot: 500 Credits with Support on `task_1` Alley Patrol showed
+    `Paused · Joint Raid / Slot 2: Support is locked to Alley Patrol.` When
+    Alley Patrol finished naturally (18 Credits / 8 XP / 1 task), the rule
+    re-armed `task_2` Joint Raid on the saved lineup. The banner changed to
+    `Waiting · Joint Raid / Starts when Joint Raid finishes.` Save: 518 Credits
+    / 1 task / both agents on `task_2`.
+  - Missing member: the rule named `[Volt, Support]` but only Volt and a reserve
+    were on the roster. Teams showed `Paused · Joint Raid / Slot 2: the saved
+    hero is no longer on the roster.` No assignment was created, no reserve was
+    substituted, and the rule stayed on disk with 500 Credits / 0 tasks.
+
+### Known limitations
+
+- Emulator only; physical phone, release signing and icon remain.
+- Device checks cover rating, missing member, a lock clearing by completion and
+  the rule's own running job. Role, count and removed-operation messages are
+  covered headlessly.
+- A missing member is a controlled save case; normal gameplay has no roster
+  removal, so this is a legacy/corrupt-save recovery path.
+- Recovery is automatic on training, recruitment, launch or settlement. There is
+  no separate manual Retry control.
+- The status card is shown on Missions and Teams; HQ and Heroes do not duplicate
+  it.
+
 ## M1.9 — Squad auto-repeat preserves its lineup (2026-11-04)
 
 Status: complete; headless and Android 35 emulator verified.
@@ -58,8 +128,8 @@ rule could fail even though the saved squad was eligible.
 
 - Emulator only; physical phone, release signing and icon remain.
 - Timed training still does not exist in v1.
-- A missing or busy lineup keeps its rule rather than alerting the player; the
-  next launch retries it.
+- A missing or busy lineup kept its rule without alerting the player; M1.10 adds
+  the live status banner and retry path.
 
 ## M1.8 — Offline progression and persisted auto-repeat (2026-11-04)
 

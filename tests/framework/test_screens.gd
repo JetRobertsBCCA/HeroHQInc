@@ -268,6 +268,60 @@ func test_team_screen_blocks_a_deployed_hero_with_its_reason() -> void:
 	screen.free()
 
 
+func test_task_board_auto_repeat_banner_is_current_and_clears() -> void:
+	var pack := _pack()
+	var state := Simulation.new_state(pack, 1, 1000)
+	state.upgrades["ops_automation"] = 1
+	_add_squad_agents(pack, state)
+	var support: Dictionary = state.agents["test_support"].duplicate(true)
+	AutoRepeat.remember(state, "s_raid", ["test_striker", "test_support"])
+	state.agents.erase("test_support")
+	var board := TaskBoard.new()
+	board.refresh(pack, state, 1000)
+	var banner := board.auto_repeat_banner()
+	assert_true(banner != null and banner.visible, "a configured rule shows its status")
+	assert_eq(banner.status_code(), Simulation.ERROR_UNKNOWN_AGENT, "the banner names the missing member")
+	assert_true(banner.reason_text().contains("Slot 2"), "the banner names the saved slot")
+	assert_true(banner.reason_text().contains("no longer on the roster"), "the reason is explicit")
+
+	state.agents["test_support"] = support
+	board.refresh(pack, state, 1000)
+	assert_eq(banner.status_code(), "", "filling the slot clears the refusal")
+	assert_false(banner.reason_text().contains("no longer on the roster"), "the old reason is not reused")
+	assert_true(banner.status_text().contains("Armed"), "the banner now reads as armed")
+
+	AutoRepeat.forget(state)
+	board.refresh(pack, state, 1000)
+	assert_false(banner.visible, "removing the rule hides the banner")
+	assert_eq(banner.reason_text(), "", "a hidden banner leaves no stale reason")
+	board.free()
+
+
+func test_team_auto_repeat_banner_names_a_locked_slot_and_recovers() -> void:
+	var pack := _pack()
+	var state := Simulation.new_state(pack, 1, 1000)
+	state.upgrades["ops_automation"] = 1
+	_add_squad_agents(pack, state)
+	AutoRepeat.remember(state, "s_raid", ["test_striker", "test_support"])
+	Simulation.assign_task(state, pack, "s_alley", ["test_support"], 1000)
+	var screen := TeamScreen.new()
+	screen.refresh(pack, state)
+	var banner := screen.auto_repeat_banner()
+	assert_eq(banner.status_code(), Simulation.ERROR_AGENT_BUSY, "the banner names the locked slot")
+	assert_true(banner.reason_text().contains("Slot 2"), "the banner names the saved slot")
+	assert_true(banner.reason_text().contains("Alley Patrol"), "the banner names the locking operation")
+
+	Simulation.simulate_delta(state, 30.0, pack)
+	var resumed := AutoRepeat.resume(state, pack, 1030)
+	assert_true(resumed.get("ok", false), "finishing the other job lets the rule start")
+	screen.refresh(pack, state)
+	assert_eq(banner.status_code(), AutoRepeat.CODE_BUSY, "the rule's own job reads as waiting")
+	assert_false(banner.reason_text().contains("Alley Patrol"), "the previous lock is gone")
+	assert_false(banner.reason_text().contains("locked"), "the rule's own job is not called paused")
+	assert_true(banner.status_text().contains("Waiting"), "the recovered rule is shown as running")
+	screen.free()
+
+
 func _add_squad_agents(pack: GamePack, state: GameState) -> void:
 	var attributes: Dictionary = {}
 	for attribute in Recruitment.attribute_names(pack):
