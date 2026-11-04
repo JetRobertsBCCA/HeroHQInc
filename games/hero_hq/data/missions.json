@@ -26,6 +26,19 @@
 		"xp": 12
 	},
 	{
+		"id": "s_stakeout",
+		"name_key": "tasks.s_stakeout",
+		"kind": "solo",
+		"stage_id": "street",
+		"category_id": "crime",
+		"base_seconds": 40,
+		"required_agent_count": 1,
+		"minimum_rating": 85,
+		"required_role_ids": ["striker"],
+		"rewards": {"credits": 95},
+		"xp": 14
+	},
+	{
 		"id": "s_drone",
 		"name_key": "tasks.s_drone",
 		"kind": "solo",
@@ -37,6 +50,32 @@
 		"required_role_ids": [],
 		"rewards": {"credits": 95, "intel": 1},
 		"xp": 16
+	},
+	{
+		"id": "s_pursuit",
+		"name_key": "tasks.s_pursuit",
+		"kind": "solo",
+		"stage_id": "city",
+		"category_id": "crime",
+		"base_seconds": 70,
+		"required_agent_count": 1,
+		"minimum_rating": 110,
+		"required_role_ids": ["tech"],
+		"rewards": {"credits": 250, "intel": 2},
+		"xp": 18
+	},
+	{
+		"id": "s_hazmat",
+		"name_key": "tasks.s_hazmat",
+		"kind": "solo",
+		"stage_id": "city",
+		"category_id": "technology",
+		"base_seconds": 75,
+		"required_agent_count": 1,
+		"minimum_rating": 115,
+		"required_role_ids": ["vanguard"],
+		"rewards": {"credits": 210, "intel": 2},
+		"xp": 20
 	},
 	{
 		"id": "s_rooftop",
@@ -52,6 +91,32 @@
 		"xp": 20
 	},
 	{
+		"id": "s_medivac",
+		"name_key": "tasks.s_medivac",
+		"kind": "solo",
+		"stage_id": "city",
+		"category_id": "rescue",
+		"base_seconds": 90,
+		"required_agent_count": 1,
+		"minimum_rating": 125,
+		"required_role_ids": ["support"],
+		"rewards": {"credits": 320, "intel": 3},
+		"xp": 24
+	},
+	{
+		"id": "s_raid",
+		"name_key": "tasks.s_raid",
+		"kind": "squad",
+		"stage_id": "city",
+		"category_id": "crime",
+		"base_seconds": 120,
+		"required_agent_count": 2,
+		"minimum_rating": 130,
+		"required_role_ids": ["striker", "support"],
+		"rewards": {"credits": 560, "intel": 5},
+		"xp": 26
+	},
+	{
 		"id": "s_convoy",
 		"name_key": "tasks.s_convoy",
 		"kind": "solo",
@@ -65,6 +130,32 @@
 		"xp": 24
 	},
 	{
+		"id": "s_ward",
+		"name_key": "tasks.s_ward",
+		"kind": "solo",
+		"stage_id": "city",
+		"category_id": "paranormal",
+		"base_seconds": 110,
+		"required_agent_count": 1,
+		"minimum_rating": 150,
+		"required_role_ids": ["mystic"],
+		"rewards": {"credits": 470, "intel": 4},
+		"xp": 28
+	},
+	{
+		"id": "s_blackout",
+		"name_key": "tasks.s_blackout",
+		"kind": "squad",
+		"stage_id": "national",
+		"category_id": "technology",
+		"base_seconds": 180,
+		"required_agent_count": 2,
+		"minimum_rating": 155,
+		"required_role_ids": ["tech", "vanguard"],
+		"rewards": {"credits": 1300, "intel": 10},
+		"xp": 34
+	},
+	{
 		"id": "s_siege",
 		"name_key": "tasks.s_siege",
 		"kind": "solo",
@@ -76,5 +167,31 @@
 		"required_role_ids": [],
 		"rewards": {"credits": 900, "intel": 8},
 		"xp": 30
+	},
+	{
+		"id": "s_breach",
+		"name_key": "tasks.s_breach",
+		"kind": "solo",
+		"stage_id": "national",
+		"category_id": "catastrophe",
+		"base_seconds": 150,
+		"required_agent_count": 1,
+		"minimum_rating": 175,
+		"required_role_ids": ["vanguard"],
+		"rewards": {"credits": 1150, "intel": 9},
+		"xp": 32
+	},
+	{
+		"id": "s_siegebreak",
+		"name_key": "tasks.s_siegebreak",
+		"kind": "squad",
+		"stage_id": "national",
+		"category_id": "catastrophe",
+		"base_seconds": 240,
+		"required_agent_count": 3,
+		"minimum_rating": 185,
+		"required_role_ids": ["vanguard", "support", "tech"],
+		"rewards": {"credits": 2400, "intel": 18},
+		"xp": 42
 	}
 ]
