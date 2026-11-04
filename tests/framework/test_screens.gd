@@ -123,6 +123,40 @@ func test_team_screen_previews_and_deploys_a_valid_squad() -> void:
 	assert_true(screen.deploy_button("s_raid").disabled, "a lone starter cannot field a squad")
 
 	# Two strong specialists satisfy Joint Raid's striker + support requirement.
+	_add_squad_agents(pack, state)
+	screen.refresh(pack, state)
+	assert_false(screen.deploy_button("s_raid").disabled, "a valid squad enables the deploy button")
+	var received: Array = []
+	screen.deploy_requested.connect(func(task_id: String, agent_ids: Array) -> void:
+		received.append({"task_id": task_id, "agent_ids": agent_ids})
+	)
+	screen.deploy_button("s_raid").emit_signal("pressed")
+	assert_eq(received.size(), 1, "pressing deploy emits one request")
+	var request: Dictionary = received[0]
+	assert_eq(str(request.get("task_id", "")), "s_raid", "the request names the squad operation")
+	assert_eq((request.get("agent_ids", []) as Array).size(), 2, "the request carries the chosen squad")
+	screen.free()
+
+
+func test_team_screen_saves_and_clears_a_lineup() -> void:
+	var pack := _pack()
+	var state := Simulation.new_state(pack, 1, 1000)
+	_add_squad_agents(pack, state)
+	var screen := TeamScreen.new()
+	screen.refresh(pack, state)
+	var save := screen.save_button("s_raid")
+	assert_true(save != null, "a squad lineup can be saved")
+	save.emit_signal("pressed")
+	assert_eq(Squads.member_ids(state, "s_raid").size(), 2, "the saved lineup keeps both members")
+	screen.refresh(pack, state)
+	var clear := screen.clear_button("s_raid")
+	assert_true(clear != null, "a saved lineup can be cleared")
+	clear.emit_signal("pressed")
+	assert_true(Squads.for_task(state, "s_raid").is_empty(), "clearing removes the preset")
+	screen.free()
+
+
+func _add_squad_agents(pack: GamePack, state: GameState) -> void:
 	var attributes: Dictionary = {}
 	for attribute in Recruitment.attribute_names(pack):
 		attributes[str(attribute)] = 40
@@ -136,11 +170,3 @@ func test_team_screen_previews_and_deploys_a_valid_squad() -> void:
 			"activity": "available",
 			"attributes": attributes.duplicate(true),
 		}
-	screen.refresh(pack, state)
-	assert_false(screen.deploy_button("s_raid").disabled, "a valid squad enables the deploy button")
-	var received: Array = []
-	screen.deploy_requested.connect(func(task_id: String) -> void: received.append(task_id))
-	screen.deploy_button("s_raid").emit_signal("pressed")
-	assert_eq(received.size(), 1, "pressing deploy emits one request")
-	assert_eq(str(received[0]), "s_raid", "the request names the squad operation")
-	screen.free()

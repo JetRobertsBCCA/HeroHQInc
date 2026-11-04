@@ -3,6 +3,27 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.4 — Saved squad lineups (2026-11-04)
+
+Status: complete. No content change.
+
+### What changed
+
+- `framework/core/squads.gd`: one saved lineup per operation, stored on the
+  already-serialized `GameState.squads` map as `squad_<task_id>`. Saving checks
+  the ids are non-empty, unique and on the roster; removal is idempotent.
+- `TeamScreen` prefers the saved lineup over auto-selection, marks it `Saved`,
+  and adds `Save squad` / `Update squad` / `Clear` controls. Deployment carries
+  the chosen agent ids into `Simulation.assign_task`, so a lineup that has since
+  become busy or under-rated is refused with the usual blocking reason.
+- `app.gd` saves immediately when a lineup changes and deploys the squad through
+  the explicit-member path.
+
+### Checks
+
+- 89/89 tests (five preset tests and the save/clear screen test are new).
+- `playthrough_demo.gd` PASS; windowed capture of all five tabs; validator OK.
+
 ## M1.3 — Playable UI pass and squad screen (2026-11-04)
 
 Status: complete. No content change.

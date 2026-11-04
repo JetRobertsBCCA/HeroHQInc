@@ -131,12 +131,12 @@ Working now: the loop end to end — deploy, settle (online and offline), earn,
 level up, train, recruit, research, rebirth, save, resume — on validated pack
 data, with an invalid pack rendering a readable error screen instead of crashing.
 The Teams tab previews every squad operation against the current roster: the
-auto-selected members, their individual and average ratings against the gate,
-any missing role, and the exact blocking reason when it cannot deploy.
+members, their individual and average ratings against the gate, any missing
+role, and the exact blocking reason when it cannot deploy. A lineup can be saved
+per operation, updated after training, or cleared to return to auto-selection.
 
-Not implemented yet: saved squad presets and manual team building, the remaining
-automation/focus layers, monetization (M6), Android export and device testing
-(M7).
+Not implemented yet: manual per-slot team building, the remaining automation and
+focus layers, monetization (M6), Android export and device testing (M7).
 
 ## Non-negotiable product rules
 

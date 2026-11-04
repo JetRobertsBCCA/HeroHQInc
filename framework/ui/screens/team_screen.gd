@@ -3,19 +3,27 @@ extends Control
 ## Squad operations: every multi-agent task, its required roles, and the
 ## strongest squad the roster can currently field.
 ##
+## A saved lineup for an operation takes precedence over auto-selection. Saving
+## is a preference, not a promise: deployment still runs the full assignment
+## check, so a busy or under-rated squad is refused with the usual reason.
+##
 ## The preview uses `Simulation.auto_select_agents` and
 ## `Simulation.evaluate_assignment`, the same helpers the deploy path uses, so
 ## what is shown here cannot disagree with what deployment would actually do.
 
-signal deploy_requested(task_id: String)
+signal deploy_requested(task_id: String, agent_ids: Array)
+signal squads_changed()
 
 const MIN_TAP_HEIGHT := 48
+const SAVE_BUTTON_WIDTH := 112
 
 var _pack: GamePack
 var _state: GameState
 var _root: VBoxContainer
 var _list: VBoxContainer
-var _buttons: Dictionary = {}
+var _deploy_buttons: Dictionary = {}
+var _save_buttons: Dictionary = {}
+var _clear_buttons: Dictionary = {}
 
 
 func squad_row_count() -> int:
@@ -23,10 +31,15 @@ func squad_row_count() -> int:
 
 
 func deploy_button(task_id: String) -> Button:
-	var button: Variant = _buttons.get(task_id, null)
-	if button is Button:
-		return button
-	return null
+	return _button(_deploy_buttons, task_id)
+
+
+func save_button(task_id: String) -> Button:
+	return _button(_save_buttons, task_id)
+
+
+func clear_button(task_id: String) -> Button:
+	return _button(_clear_buttons, task_id)
 
 
 func refresh(pack: GamePack, state: GameState) -> void:
@@ -34,7 +47,9 @@ func refresh(pack: GamePack, state: GameState) -> void:
 	_state = state
 	_ensure_built()
 	_clear(_list)
-	_buttons.clear()
+	_deploy_buttons.clear()
+	_save_buttons.clear()
+	_clear_buttons.clear()
 
 	var task_ids: Array = []
 	for task_id in pack.task_ids():
@@ -94,7 +109,11 @@ func _ensure_built() -> void:
 func _squad_row(task_id: String) -> Control:
 	var task := _pack.task(task_id)
 	var required_count := maxi(int(task.get("required_agent_count", 1)), 1)
-	var selected := Simulation.auto_select_agents(_state, _pack, task_id, true)
+	var saved := not Squads.for_task(_state, task_id).is_empty()
+	var selected: Array = Squads.member_ids(_state, task_id)
+	if selected.is_empty():
+		saved = false
+		selected = Simulation.auto_select_agents(_state, _pack, task_id, true)
 	var evaluation := Simulation.evaluate_assignment(_state, _pack, task_id, selected)
 
 	var panel := PanelContainer.new()
@@ -139,7 +158,9 @@ func _squad_row(task_id: String) -> Control:
 		rating_total += AgentRules.rating_value(agent)
 
 	var members := Label.new()
-	members.text = "%s %d/%d · %s" % [
+	var prefix := "%s · " % _pack.label("ui.saved_squad", "Saved") if saved else ""
+	members.text = "%s%s %d/%d · %s" % [
+		prefix,
 		_pack.label("ui.squad", "Squad"),
 		selected.size(),
 		required_count,
@@ -177,15 +198,36 @@ func _squad_row(task_id: String) -> Control:
 	row.add_theme_constant_override("separation", 8)
 	column.add_child(row)
 
-	var button := Button.new()
-	button.name = "Deploy_%s" % task_id
-	button.text = _pack.label("ui.deploy", "Deploy")
-	button.custom_minimum_size = Vector2(0, MIN_TAP_HEIGHT)
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.disabled = not evaluation.get("ok", false)
-	button.pressed.connect(func() -> void: deploy_requested.emit(task_id))
-	row.add_child(button)
-	_buttons[task_id] = button
+	var deploy := Button.new()
+	deploy.name = "Deploy_%s" % task_id
+	deploy.text = _pack.label("ui.deploy", "Deploy")
+	deploy.custom_minimum_size = Vector2(0, MIN_TAP_HEIGHT)
+	deploy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	deploy.disabled = selected.is_empty() or not evaluation.get("ok", false)
+	deploy.pressed.connect(func() -> void: deploy_requested.emit(task_id, selected))
+	row.add_child(deploy)
+	_deploy_buttons[task_id] = deploy
+
+	var save := Button.new()
+	save.name = "Save_%s" % task_id
+	var save_text := _pack.label("ui.save_squad", "Save squad")
+	if saved:
+		save_text = _pack.label("ui.update_squad", "Update squad")
+	save.text = save_text
+	save.custom_minimum_size = Vector2(SAVE_BUTTON_WIDTH, MIN_TAP_HEIGHT)
+	save.disabled = selected.is_empty()
+	save.pressed.connect(func() -> void: _on_save(task_id, selected))
+	row.add_child(save)
+	_save_buttons[task_id] = save
+
+	if saved:
+		var clear := Button.new()
+		clear.name = "Clear_%s" % task_id
+		clear.text = _pack.label("ui.clear_squad", "Clear")
+		clear.custom_minimum_size = Vector2(0, MIN_TAP_HEIGHT)
+		clear.pressed.connect(func() -> void: _on_clear(task_id))
+		row.add_child(clear)
+		_clear_buttons[task_id] = clear
 
 	# The reason gets its own full-width line: a wrapping label inside the button
 	# row has zero minimum width and collapses into a one-character column.
@@ -200,7 +242,24 @@ func _squad_row(task_id: String) -> Control:
 	return panel
 
 
-## Required roles the auto-selected squad does not cover, as display names.
+func _on_save(task_id: String, agent_ids: Array) -> void:
+	if Squads.save(_state, task_id, agent_ids).get("ok", false):
+		squads_changed.emit()
+
+
+func _on_clear(task_id: String) -> void:
+	if Squads.clear(_state, task_id):
+		squads_changed.emit()
+
+
+func _button(source: Dictionary, task_id: String) -> Button:
+	var button: Variant = source.get(task_id, null)
+	if button is Button:
+		return button
+	return null
+
+
+## Required roles the chosen squad does not cover, as display names.
 func _missing_roles(task: Dictionary, selected: Array) -> Array[String]:
 	var missing: Array[String] = []
 	var required: Variant = task.get("required_role_ids", [])

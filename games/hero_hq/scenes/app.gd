@@ -138,7 +138,8 @@ func _on_tab_selected(tab_id: String) -> void:
 	if tab_id == TEAMS_TAB:
 		_teams = TeamScreen.new()
 		_teams.name = "TeamScreen"
-		_teams.deploy_requested.connect(_on_deploy_requested)
+		_teams.deploy_requested.connect(_on_squad_deploy_requested)
+		_teams.squads_changed.connect(_on_squads_changed)
 		_teams.refresh(_pack, _state)
 		_shell.set_content(_teams)
 		return
@@ -217,6 +218,30 @@ func _on_recruit_requested() -> void:
 		_pack.label("ui.recruited", "Recruited"),
 		str(result["name"]),
 	])
+	SaveService.save_state(_state)
+	_refresh_content()
+
+
+func _on_squad_deploy_requested(task_id: String, agent_ids: Array) -> void:
+	var result := Simulation.assign_task(_state, _pack, task_id, agent_ids, _clock.now_utc())
+	if not result.get("ok", false):
+		_log("%s: %s" % [
+			_pack.label("ui.deploy_failed", "Cannot deploy"),
+			_pack.label(
+				"ui.blocked_%s" % str(result.get("code", "")),
+				str(result.get("code", "")),
+			),
+		])
+		_refresh_content()
+		return
+	if Research.unlocked(_state, _pack, Research.EFFECT_AUTO_REPEAT):
+		_auto_task_id = task_id
+	SaveService.save_state(_state)
+	_refresh_content()
+
+
+## A saved lineup changed: persist it and rebuild the tab so the buttons match.
+func _on_squads_changed() -> void:
 	SaveService.save_state(_state)
 	_refresh_content()
 
