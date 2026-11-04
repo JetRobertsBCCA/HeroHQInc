@@ -249,6 +249,9 @@ func _on_squad_deploy_requested(task_id: String, agent_ids: Array) -> void:
 		return
 	if Research.unlocked(_state, _pack, Research.EFFECT_AUTO_REPEAT):
 		AutoRepeat.remember(_state, task_id, agent_ids)
+	# Save the lineup that actually started so the rebuilt Teams row does not
+	# fall back to an older preset that differs from the active operation.
+	Squads.save(_state, task_id, agent_ids)
 	SaveService.save_state(_state)
 	_refresh_content()
 
