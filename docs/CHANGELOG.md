@@ -3,6 +3,59 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.8 — Offline progression and persisted auto-repeat (2026-11-04)
+
+Status: complete; headless and Android 35 emulator verified.
+
+### What was wrong
+
+The operations loop already settled a job on launch, but the automation rank it
+sold was memory-only: the task chosen on deploy lived in `App._auto_task_id`, and
+a force-stop/relaunch forgot it. Launch settlement also never ran the auto-repeat
+path, so a job that finished while the app was closed was never replaced.
+
+### What changed
+
+- `AutoRepeat` (`framework/core/auto_repeat.gd`) is the game-neutral automation
+  helper. It stores the remembered task in `GameState.automation_rules` under a
+  `repeat_task` rule, so the choice is part of the save. `resume()` deploys at
+  most one replacement, only when the research is owned and no job is running;
+  a locked rule or a task the roster can no longer field is dropped.
+- `App` re-arms automation after launch settlement and before the shell is built,
+  remembers the task on solo/squad deploy, and forgets it on rebirth.
+- Four headless cases cover rule persistence through save/load, a single
+  replacement after settlement plus the busy refusal, a missing research rank,
+  and an under-rated task being forgotten.
+- README and `docs/ANDROID.md` record the device checks and the remaining limits.
+
+### Checks
+
+- 99/99 tests (95 before), validator `OK hero_hq`, `playthrough_demo.gd` PASS.
+- Android 35 x86_64 emulator, controlled saves with relative `ends_utc` values
+  (host clock untouched):
+  - Solo mission: seed 1000 Credits, Alley Patrol 10 s past due, 40 s since the
+    last settlement. Launch: 1018 Credits, 1 task, 8 XP, assignment cleared,
+    Volt available, `last_settled_utc` advanced. A second force-stop/relaunch
+    kept 1018 / 1 / 8.
+  - Training (instant in v1, so there is no in-progress timer): 1000 → 975
+    Credits and 0 → 40 XP; reload unchanged. Two more sessions reached Lv 2
+    (925 Credits, 0 XP, power 6 / speed 7 / skill 5); another reload unchanged.
+  - Auto-repeat: seed 1000 Credits, one past-due Alley Patrol, `ops_automation`
+    and a remembered `s_alley`. Launch settled it and re-armed `task_2`
+    (1018 / 1 task / 8 XP). Killing the app for 25 s and relaunching settled
+    `task_2` and re-armed `task_3` (1036 / 2 / 16). A quick relaunch did not
+    double-pay (1036 / 2, `task_3`). Leaving it open settled `task_3` and
+    re-armed `task_4` (1054 / 3 / 24); the next relaunch settled `task_4` once
+    and re-armed `task_5` (1072 / 4 / 32). The rule survived every cycle.
+
+### Known limitations
+
+- Emulator only; no physical phone, release signing or icon yet.
+- Timed training does not exist in v1, so the "training in progress" case has no
+  state to exercise.
+- The device automation run used a solo operation; squad auto-repeat shares the
+  same `Simulation.deploy` path but was not separately repeated on device.
+
 ## M1.7 — Manual team lineups (2026-11-04)
 
 Status: complete; headless and Android 35 emulator verified.

@@ -32,7 +32,6 @@ var _task_board: TaskBoard
 var _roster: RosterScreen
 var _teams: TeamScreen
 var _prestige_screen: PrestigeScreen
-var _auto_task_id: String = ""
 var _tick_count: int = 0
 
 
@@ -46,6 +45,9 @@ func _ready() -> void:
 	_pack = loaded["pack"]
 	_state = _restore_or_create_state()
 	_settle_absence()
+	# Re-arm a persisted auto-repeat after the absence has settled, before the
+	# shell is built, so the operation a player left running picks up again.
+	_maybe_auto_repeat(_clock.now_utc())
 	_build_shell()
 	_start_timer()
 
@@ -180,7 +182,7 @@ func _on_deploy_requested(task_id: String) -> void:
 		_refresh_content()
 		return
 	if Research.unlocked(_state, _pack, Research.EFFECT_AUTO_REPEAT):
-		_auto_task_id = task_id
+		AutoRepeat.remember(_state, task_id)
 	SaveService.save_state(_state)
 	_refresh_content()
 
@@ -235,7 +237,7 @@ func _on_squad_deploy_requested(task_id: String, agent_ids: Array) -> void:
 		_refresh_content()
 		return
 	if Research.unlocked(_state, _pack, Research.EFFECT_AUTO_REPEAT):
-		_auto_task_id = task_id
+		AutoRepeat.remember(_state, task_id)
 	SaveService.save_state(_state)
 	_refresh_content()
 
@@ -263,7 +265,7 @@ func _on_rebirth_requested() -> void:
 		"gained": int(result["gained"]),
 		"chips": int(result["chips"]),
 	}])
-	_auto_task_id = ""
+	AutoRepeat.forget(_state)
 	SaveService.save_state(_state)
 	_refresh_content()
 
@@ -289,21 +291,21 @@ func _on_research_requested(branch_id: String) -> void:
 	_refresh_content()
 
 
-## Repeats the last deployed operation once it finishes, but only when the
-## research branch is bought. One repeat per completion, never a chain.
+## Repeats the remembered operation once it finishes, but only when the
+## research branch is bought. One repeat per completion, never a chain. The
+## rule lives in the save, so this also works after the app was killed and the
+## operation completed while it was closed.
 func _maybe_auto_repeat(now: int) -> void:
-	if _auto_task_id.is_empty():
+	if AutoRepeat.task_id(_state).is_empty():
 		return
-	if not Research.unlocked(_state, _pack, Research.EFFECT_AUTO_REPEAT):
-		_auto_task_id = ""
-		return
-	if not _state.assignments.is_empty():
-		return
-	if not Simulation.deploy(_state, _pack, _auto_task_id, now).get("ok", false):
-		_auto_task_id = ""
+	var result := AutoRepeat.resume(_state, _pack, now)
+	if not result.get("ok", false):
+		# A locked or unusable rule is dropped by resume(); persist that.
+		SaveService.save_state(_state)
 		return
 	SaveService.save_state(_state)
-	_refresh_content()
+	if _shell != null:
+		_refresh_content()
 
 
 func _build_hq_content() -> Control:

@@ -120,6 +120,19 @@ through the save file):
   `Hero already deployed`, and confirmed the preset and the lock survived a
   relaunch; a non-default lineup (starter + Tech) was then saved and also
   survived a force-stop/relaunch
+- offline progression: seed 1000 Credits, an Alley Patrol 10 s past due and
+  40 s since settlement; launch paid 18 Credits and 8 XP, cleared the assignment,
+  freed Volt, advanced `last_settled_utc` and left 1018 / 1 task / 8 XP on disk;
+  a second force-stop/relaunch did not pay again
+- training persistence: training is instant, so there is no timed in-progress
+  state; 1000 → 975 Credits / 40 XP survived a reload, and two more sessions
+  reached Lv 2 (925 Credits, 0 XP, power 6 / speed 7 / skill 5), which also
+  survived
+- persisted auto-repeat: with `ops_automation` and a remembered Alley Patrol,
+  a past-due job settled and re-armed on launch (1018 / 1 / 8); a 25 s
+  force-stop settled the next and re-armed (1036 / 2 / 16); a quick reload did
+  not double-pay; an in-session completion then re-armed (1054 / 3 / 24), and
+  the next relaunch settled once more and re-armed (1072 / 4 / 32)
 
 The rebirth test used a hand-seeded save (level and lifetime written into the
 profile) because reaching level 7 takes far longer than a scripted device run.
@@ -127,6 +140,11 @@ Everything else was played through the UI.
 
 ## Device bugs found and fixed by this pass
 
+- **Auto-repeat forgot its task on relaunch.** The task chosen on deploy lived
+  only in memory, so a bought automation rank stopped working after a force-stop.
+  The choice is now a `repeat_task` rule in `automation_rules`, launch re-arms it
+  after offline settlement, and rebirth clears it. Four headless cases cover the
+  rule, the one-replacement cap, missing research and an unusable task.
 - **Touch scrolling did not exist.** Godot's `ScrollContainer` ignores finger
   drags, so content below the fold — including the Rebirth button — could not be
   reached on a phone. `framework/ui/touch_scroll.gd` adds drag scrolling and
@@ -156,6 +174,8 @@ Everything else was played through the UI.
 ## Not done
 
 - Physical-device testing, release signing and an app icon.
+- Timed training (v1 training is instant) and a device pass for squad
+  auto-repeat.
 - Play Billing and any ad integration. The product rule is unchanged: no banner,
   interstitial, native or forced ads, ever; only a player-initiated, optionally
   watched rewarded ad may exist at M6.

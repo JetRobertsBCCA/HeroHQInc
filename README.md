@@ -56,8 +56,11 @@ adb install -r build/hero_hq.apk
 Verified on an Android 35 x86_64 emulator (Pixel 6 AVD, host GPU), not yet on a
 physical phone: install and launch, fresh-save onboarding, first mission and
 payout, all five tabs, force-stop/relaunch persistence, role-targeted
-recruitment, a research purchase and a two-step rebirth. Use `-gpu host`; the
-software renderer cannot link Godot's canvas shader and shows a black screen.
+recruitment, a research purchase and a two-step rebirth. Seeded offline saves
+settled a due operation once across force-stop/relaunch, instant training
+persisted, and persisted auto-repeat re-armed after settlement while closed. Use
+`-gpu host`; the software renderer cannot link Godot's canvas shader and shows a
+black screen.
 
 ## Play the loop
 
@@ -88,7 +91,9 @@ with 50 Credits, which is enough for one training session and no more.
    it, and `Deploy` still enforces roles and the rating gate with the exact
    reason on screen.
 6. Close the app mid-operation and reopen it later: the same settlement call
-   finishes it on launch, capped at the pack's 8-hour allowance.
+   finishes it on launch, capped at the pack's 8-hour allowance. If the
+   automation rank is owned, the remembered operation is re-armed once after
+   that settlement.
 
 Measured with `tooling/balance_report.gd`, one greedy agent — the model recruits
 nobody, so this is a lower bound — plays **2 hours**, completes **68**
@@ -153,8 +158,8 @@ level up, train, recruit, research, rebirth, save, resume — on validated pack
 data, with an invalid pack rendering a readable error screen instead of crashing.
 Recruitment can target a role, HQ names the next objective, and Upgrades spends
 Intel on payout and training research plus an automation rank that repeats the
-last operation once per completion. The Teams tab previews every squad operation
-against the current roster: the members, their individual and average ratings
+last operation once per completion, including after a relaunch. The Teams tab
+previews every squad operation against the current roster: the members, their individual and average ratings
 against the gate, any missing role, and the exact blocking reason when it cannot
 deploy. A lineup can be saved per operation, updated after training, or cleared
 to return to auto-selection.
