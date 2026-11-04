@@ -91,6 +91,32 @@ func _play() -> void:
 
 	if tech.is_empty():
 		return
+
+	# --- Teams: explicit slot editing, duplicates and empty-slot reasons ----
+	await _select_tab("teams")
+	var teams := _teams()
+	_ok(teams != null, "teams tab built the lineup editor")
+	if teams == null:
+		return
+	_ok(teams.slot_count("s_raid") == 2, "each required hero has its own slot")
+	_ok(teams.select_slot_agent("s_raid", 0, "hero_volt"), "slot one takes the starter")
+	_ok(not teams.select_slot_agent("s_raid", 1, "hero_volt"), "one hero cannot fill two slots")
+	_ok(teams.select_slot_agent("s_raid", 1, ""), "a slot can be emptied")
+	_ok(teams.deploy_button("s_raid").disabled, "an empty slot blocks deployment")
+	_ok(
+		teams.row_reason("s_raid") == _pack().label("ui.blocked_squad_incomplete", ""),
+		"an empty slot explains itself",
+	)
+	_ok(teams.select_slot_agent("s_raid", 1, tech), "the second slot takes a second hero")
+	_ok(not teams.save_button("s_raid").disabled, "a complete lineup can be saved")
+	teams.save_button("s_raid").pressed.emit()
+	await process_frame
+	var saved_ids := Squads.member_ids(_state(), "s_raid")
+	_ok(saved_ids.size() == 2, "the manual lineup is saved")
+	_ok(saved_ids.has("hero_volt") and saved_ids.has(tech), "the saved lineup keeps the chosen heroes")
+
+	# Saving rebuilt the tab, so return to Heroes before training again.
+	await _select_tab("heroes")
 	var sessions := 0
 	while AgentRules.rating(_state().agents[tech]) < TECH_GATE_RATING and sessions < 200:
 		sessions += 1
@@ -175,6 +201,7 @@ func _play() -> void:
 	if restored != null:
 		_ok(restored.prestige_chips() > 0, "chips persist through a reload")
 		_ok(restored.agents.size() == roster_before, "the roster persists through a reload")
+		_ok(restored.squads.has("squad_s_raid"), "the manual lineup persists through a reload")
 	_completed = true
 
 
@@ -283,6 +310,10 @@ func _board() -> TaskBoard:
 
 func _roster() -> RosterScreen:
 	return _app.get("_roster") as RosterScreen
+
+
+func _teams() -> TeamScreen:
+	return _app.get("_teams") as TeamScreen
 
 
 func _state() -> GameState:

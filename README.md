@@ -6,7 +6,7 @@ coordinated citywide agency while the player builds, trains and automates teams.
 
 - **Engine:** Godot **4.7.2** stable, GDScript, `gl_compatibility` renderer
 - **Target:** Android first, portrait, 360×640 logical canvas with safe-area insets
-- **Status:** **v1 loop complete** (M1.5) — fresh save to rebirth, played end to end; debug APK verified on an Android 35 emulator (see [docs/ANDROID.md](docs/ANDROID.md)); see [docs/CHANGELOG.md](docs/CHANGELOG.md)
+- **Status:** **v1 loop complete** (M1.7) — fresh save to rebirth with manual squad lineups, played end to end; debug APK verified on an Android 35 emulator (see [docs/ANDROID.md](docs/ANDROID.md)); see [docs/CHANGELOG.md](docs/CHANGELOG.md)
 - **Design source of truth:** `HERO_HQ_MASTER_CODEX.md` (see *Design document* below)
 
 ## Run it
@@ -81,9 +81,12 @@ with 50 Credits, which is enough for one training session and no more.
 4. A deployed operation moves to **Active operations** with a live countdown.
    When it reaches zero it pays out, the heroes are freed and the result is
    logged on the HQ tab.
-5. **Teams** previews every squad operation against the current roster — members,
-   individual and average ratings against the gate, missing roles, and the exact
-   blocking reason — and saves one lineup per operation.
+5. **Teams** gives every squad operation one slot per required hero. Tapping a
+   slot opens an inline roster list; a hero already in another slot or currently
+   deployed is shown disabled, so duplicates and activity locks cannot be
+   chosen. `Save squad` stores the lineup (it survives reloads), `Clear` removes
+   it, and `Deploy` still enforces roles and the rating gate with the exact
+   reason on screen.
 6. Close the app mid-operation and reopen it later: the same settlement call
    finishes it on launch, capped at the pack's 8-hour allowance.
 
@@ -156,9 +159,9 @@ against the gate, any missing role, and the exact blocking reason when it cannot
 deploy. A lineup can be saved per operation, updated after training, or cleared
 to return to auto-selection.
 
-Not implemented yet: manual per-slot team building, the remaining automation and
-focus layers, monetization (M6), and physical-device Android testing. The debug
-build runs on an emulator; release signing, an app icon and a phone run remain.
+Not implemented yet: the remaining automation and focus layers, monetization
+(M6), and physical-device Android testing. The debug build runs on an emulator;
+release signing, an app icon and a phone run remain.
 
 ## Non-negotiable product rules
 

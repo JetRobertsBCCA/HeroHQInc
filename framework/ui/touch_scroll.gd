@@ -7,14 +7,21 @@ extends ScrollContainer
 ## Rebirth button sat exactly there.
 ##
 ## The drag is handled before the GUI so it works over buttons and labels. A tap
-## is left untouched: only a release that followed a real drag is swallowed, so
-## scrolling can never press the button it started on.
+## is left untouched: only a release that followed a real drag is swallowed —
+## the touch release and the mouse release Godot emulates from it — so scrolling
+## can never press the button it started on, even though scrolling moves that
+## button to where the finger lifts.
 
 const DRAG_THRESHOLD := 6.0
 
 var _touch_index: int = -1
 var _start_y: float = 0.0
 var _dragging: bool = false
+# Touch also emulates a mouse click. The emulated release can arrive just before
+# or after the touch release, and the scrolled control is then still under the
+# finger, so it would treat the gesture as a press. Swallow that one release.
+var _suppress_mouse_release: bool = false
+var _mouse_release_seen: bool = false
 
 
 func _input(event: InputEvent) -> void:
@@ -28,14 +35,27 @@ func _input(event: InputEvent) -> void:
 			_touch_index = touch.index
 			_start_y = touch.position.y
 			_dragging = false
+			_suppress_mouse_release = false
+			_mouse_release_seen = false
 			return
 		if touch.index == _touch_index:
 			# Swallow the release so the control under the finger never fires a
 			# click for a gesture that was a scroll.
 			if _dragging:
 				get_viewport().set_input_as_handled()
+				if not _mouse_release_seen:
+					_suppress_mouse_release = true
 			_touch_index = -1
 			_dragging = false
+		return
+
+	if event is InputEventMouseButton:
+		var mouse := event as InputEventMouseButton
+		if mouse.button_index == MOUSE_BUTTON_LEFT and not mouse.pressed:
+			_mouse_release_seen = true
+			if _dragging or _suppress_mouse_release:
+				get_viewport().set_input_as_handled()
+				_suppress_mouse_release = false
 		return
 
 	if event is InputEventScreenDrag:

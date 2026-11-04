@@ -114,6 +114,12 @@ through the save file):
   banks 4 chips, resets Credits to 50 and Intel to 0, rewinds both agents to
   level 1 with base attributes (rating 70), keeps the roster, and survives a
   restart
+- teams: opened a slot, saw the agent already in the other slot disabled,
+  emptied the slot (`Fill every slot to deploy`, Deploy and Save disabled),
+  refilled it, saved, deployed (assignment created, both agents locked), saw
+  `Hero already deployed`, and confirmed the preset and the lock survived a
+  relaunch; a non-default lineup (starter + Tech) was then saved and also
+  survived a force-stop/relaunch
 
 The rebirth test used a hand-seeded save (level and lifetime written into the
 profile) because reaching level 7 takes far longer than a scripted device run.
@@ -135,6 +141,17 @@ Everything else was played through the UI.
   Credits"; the reason now formats the actual resource name.
 - **A one-short squad said "No free hero".** The agent-count message now states
   how many heroes the operation needs.
+- **Popup pickers did not hit-test reliably.** An `OptionButton` menu opened in
+  the right place, but taps aimed at an item landed on the row above and opened
+  a different slot's menu. Slots now open an inline list of full-width buttons
+  directly under the slot, which needs no popup window.
+- **Three action buttons in one row were too cramped.** Deploy, Save and Clear
+  are full-width rows; the Save/Clear targets no longer shrink when Clear
+  appears.
+- **Drag-scrolling could press the control it started on.** Scrolling moves the
+  control with the finger, so the touch release still landed on it; a drag from
+  a slot opened that slot's chooser. `TouchScroll` now also swallows the mouse
+  release Godot emulates from touch, and a drag scrolls without choosing.
 
 ## Not done
 

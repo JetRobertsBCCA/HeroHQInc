@@ -3,6 +3,59 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.7 — Manual team lineups (2026-11-04)
+
+Status: complete; headless and Android 35 emulator verified.
+
+### What was wrong
+
+Teams previewed the strongest available set and could only save that suggestion.
+There was no way to put a specific hero in a specific squad operation, so the
+squad half of the game played itself.
+
+### What changed
+
+- `TeamScreen` keeps a draft lineup per operation, one picker per required agent.
+  A draft seeds from the saved preset, or from auto-selection when none exists,
+  so the tab still opens with a usable suggestion.
+- Tapping a slot opens an inline chooser under it: `Empty` plus the roster sorted
+  by rating. Agents already in another slot and deployed agents stay visible but
+  disabled, and both the slot and the card say `deployed`. The card explains an
+  incomplete lineup (`Fill every slot to deploy`), a missing role, a deployed
+  agent or a low rating, using the same evaluation the deploy path runs.
+- `Save squad` writes the draft only when every slot is filled and unique; an
+  incomplete row disables both Save and Deploy. `Clear` removes the preset and
+  re-seeds the suggestion.
+- The chooser is inline rather than an `OptionButton` popup: on-device testing
+  showed popup item taps landing on the row above, opening the wrong slot's menu.
+  Deploy, Save and Clear also became full-width rows because three buttons side
+  by side were too cramped to hit once Clear appeared.
+- `TouchScroll` now also swallows the mouse release Godot emulates from a touch.
+  Scrolling moves the control under the finger, so before this a drag that ended
+  on a slot still opened that slot's chooser.
+- Locale keys `ui.squad_slot`, `ui.slot_empty`, `ui.slot_busy` and
+  `ui.blocked_squad_incomplete`; the Teams hint now says to tap a slot.
+- Three headless cases: slot editing with duplicate refusal and a deployed
+  draft, empty-slot reason plus save/reload, and a deployed agent disabling its
+  choice with the right reason. The playthrough demo now edits slots, refuses a
+  duplicate, empties and refills a slot, saves a manual lineup, and asserts the
+  preset survives rebirth and a reload.
+
+### Checks
+
+- 95/95 tests, validator `OK hero_hq`, `playthrough_demo.gd` PASS.
+- Android 35 x86_64 emulator with a seeded three-agent roster: emptied a slot
+  (reason shown, Deploy and Save disabled), refilled it, saved it as
+  `[hero_volt, op_0100]`, deployed it (assignment `task_2`, both agents
+  `assigned`), saw `Hero already deployed`, and confirmed the preset and lock
+  survived a relaunch. A deliberately non-default lineup
+  `[hero_volt, op_0101]` then saved and survived a force-stop/relaunch.
+
+### Known limitations
+
+- Emulator only; release signing, an app icon and a physical phone run remain.
+- One saved lineup per operation; named multi-preset teams are not part of v1.
+
 ## M1.6 — Android export and emulator pass (2026-11-04)
 
 Status: complete on an emulator. Not verified on a physical phone.

@@ -173,6 +173,101 @@ func test_team_screen_saves_and_clears_a_lineup() -> void:
 	screen.free()
 
 
+func test_team_screen_edits_individual_slots() -> void:
+	var pack := _pack()
+	var state := Simulation.new_state(pack, 1, 1000)
+	_add_squad_agents(pack, state)
+	var screen := TeamScreen.new()
+	screen.refresh(pack, state)
+	assert_eq(screen.slot_count("s_raid"), 2, "each required hero gets its own slot")
+	assert_true(screen.slot_button("s_raid", 0) != null, "slot one renders a picker")
+	assert_true(screen.slot_button("s_raid", 1) != null, "slot two renders a picker")
+	assert_false(screen.slot_picker_open("s_raid", 0), "the chooser starts closed")
+	assert_true(screen.open_slot_picker("s_raid", 0), "a slot opens its inline chooser")
+	assert_true(screen.slot_picker_open("s_raid", 0), "the chooser stays under its slot")
+	assert_true(screen.slot_choice_button("s_raid", 0, "test_support") != null, "the chooser lists roster agents")
+	assert_true(screen.select_slot_agent("s_raid", 0, "test_striker"), "the first slot takes a hero")
+	assert_false(screen.select_slot_agent("s_raid", 1, "test_striker"), "a hero cannot fill two slots")
+	assert_true(screen.select_slot_agent("s_raid", 1, "test_support"), "the second slot takes another hero")
+	assert_eq(screen.lineup("s_raid"), ["test_striker", "test_support"], "the lineup follows the slots")
+	assert_false(screen.deploy_button("s_raid").disabled, "a full valid lineup enables deploy")
+	var received: Array = []
+	screen.deploy_requested.connect(func(task_id: String, agent_ids: Array) -> void:
+		received.append({"task_id": task_id, "agent_ids": agent_ids})
+	)
+	screen.deploy_button("s_raid").pressed.emit()
+	assert_eq(received.size(), 1, "pressing deploy emits one request")
+	assert_eq((received[0]["agent_ids"] as Array).size(), 2, "the request carries the drafted lineup")
+	screen.free()
+
+
+func test_team_screen_explains_an_empty_slot_and_saves_the_draft() -> void:
+	var pack := _pack()
+	var state := Simulation.new_state(pack, 1, 1000)
+	_add_squad_agents(pack, state)
+	var screen := TeamScreen.new()
+	screen.refresh(pack, state)
+	assert_true(screen.select_slot_agent("s_raid", 1, ""), "a slot can be emptied")
+	assert_true(screen.deploy_button("s_raid").disabled, "an empty slot blocks deploy")
+	assert_eq(
+		screen.row_reason("s_raid"),
+		pack.label("ui.blocked_squad_incomplete", ""),
+		"the empty slot states what to do",
+	)
+	assert_true(screen.save_button("s_raid").disabled, "an incomplete lineup cannot be saved")
+	assert_true(screen.select_slot_agent("s_raid", 1, "test_support"), "the slot can be filled again")
+	assert_false(screen.save_button("s_raid").disabled, "a complete lineup can be saved")
+	screen.save_button("s_raid").pressed.emit()
+	assert_eq(
+		Squads.member_ids(state, "s_raid"),
+		["test_striker", "test_support"],
+		"the drafted lineup is saved",
+	)
+	screen.refresh(pack, state)
+	assert_eq(
+		screen.lineup("s_raid"),
+		["test_striker", "test_support"],
+		"the saved lineup reloads into the slots",
+	)
+	screen.free()
+
+
+func test_team_screen_blocks_a_deployed_hero_with_its_reason() -> void:
+	var pack := _pack()
+	var state := Simulation.new_state(pack, 1, 1000)
+	_add_squad_agents(pack, state)
+	var screen := TeamScreen.new()
+	screen.refresh(pack, state)
+	screen.select_slot_agent("s_raid", 0, "test_striker")
+	screen.select_slot_agent("s_raid", 1, "test_support")
+	screen.save_button("s_raid").pressed.emit()
+	state.agents["test_striker"]["activity"] = "assigned"
+	var deployed: Dictionary = state.agents["test_striker"].duplicate(true)
+	deployed["id"] = "test_deployed"
+	deployed["activity"] = "assigned"
+	state.agents["test_deployed"] = deployed
+	screen.refresh(pack, state)
+	assert_true(screen.deploy_button("s_raid").disabled, "a deployed hero blocks deploy")
+	assert_eq(
+		screen.row_reason("s_raid"),
+		pack.label("ui.blocked_agent_busy", ""),
+		"the row names the deployed hero as the reason",
+	)
+	assert_false(screen.select_slot_agent("s_raid", 0, "test_deployed"), "a deployed hero cannot be picked")
+	screen.open_slot_picker("s_raid", 0)
+	var support_choice := screen.slot_choice_button("s_raid", 0, "test_support")
+	assert_true(
+		support_choice != null and support_choice.disabled,
+		"a hero already in the other slot is disabled in the chooser",
+	)
+	var busy_choice := screen.slot_choice_button("s_raid", 0, "test_deployed")
+	assert_true(
+		busy_choice != null and busy_choice.disabled,
+		"a deployed hero is disabled in the chooser",
+	)
+	screen.free()
+
+
 func _add_squad_agents(pack: GamePack, state: GameState) -> void:
 	var attributes: Dictionary = {}
 	for attribute in Recruitment.attribute_names(pack):
