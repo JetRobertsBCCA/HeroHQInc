@@ -3,6 +3,33 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.2.1 — Roster survives rebirth, in-game playthrough (2026-11-04)
+
+Status: complete. No content change.
+
+### What was wrong
+
+`docs/BALANCE.md` promised that a rebirth keeps the roster at pack base values,
+but `Prestige._reset_run` cleared `state.agents` and reseeded only the starters.
+Every recruited hero — up to 240 of them, each bought with Credits — vanished on
+rebirth, which made the collection layer pointless in a loop that rebirths often.
+
+### What changed
+
+- `AgentRules.reset_progress` rewinds an agent to level one with base attributes,
+  no XP and no assignment. Growth is linear per level, so subtracting the same
+  growth per level restores the exact starting attributes without storing a
+  second copy.
+- `Prestige._reset_run` rewinds every existing agent instead of clearing the
+  roster, then reseeds any missing starter. Chips, rebirth count and lifetime
+  totals are untouched, as before.
+- `tooling/playthrough_demo.gd` boots the real app scene and plays it through the
+  real UI — Missions, Heroes and Upgrades tabs, Deploy, Train, Recruit, Research
+  and the two-step Rebirth — faking only the clock. It snapshots and restores the
+  player's save, so a failed demo cannot damage real progress.
+
+Checks: `playthrough_demo.gd` PASS, 81/81 tests, validator `OK hero_hq`.
+
 ## M1.2 — Long-term curve and Command Rebirth (2026-11-03)
 
 Status: complete and measured. Content version stays 2 (additive `prestige` block).
@@ -226,8 +253,7 @@ Status: complete, gate met in a headless environment. Not yet verified on Androi
 - [x] App scene: loads and validates the pack, restores or creates state, settles
       absence through the shared simulation path, saves, then builds the themed
       shell with pack-driven tabs and an HQ placeholder that draws an operations
-      network from live roster data. Invalid packs render a readable error screen
-      instead of crashing.
+      network from live roster data.
 - [x] Headless test runner (`tests/run_tests.gd`) with a dependency-free assertion
       harness and 31 tests over simulation, saves, pack validation, pack loading,
       theming, the tab shell, and framework neutrality.
