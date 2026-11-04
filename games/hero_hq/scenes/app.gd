@@ -237,7 +237,7 @@ func _on_squad_deploy_requested(task_id: String, agent_ids: Array) -> void:
 		_refresh_content()
 		return
 	if Research.unlocked(_state, _pack, Research.EFFECT_AUTO_REPEAT):
-		AutoRepeat.remember(_state, task_id)
+		AutoRepeat.remember(_state, task_id, agent_ids)
 	SaveService.save_state(_state)
 	_refresh_content()
 

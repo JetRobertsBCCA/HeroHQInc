@@ -3,6 +3,64 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.9 — Squad auto-repeat preserves its lineup (2026-11-04)
+
+Status: complete; headless and Android 35 emulator verified.
+
+### What was wrong
+
+Auto-repeat persisted only the task id and resumed through `Simulation.deploy`,
+which auto-selects the strongest free agents. A squad therefore did not replay
+the lineup the player deployed: a stronger reserve could be substituted, or the
+rule could fail even though the saved squad was eligible.
+
+### What changed
+
+- `AutoRepeat` rules now store the deployed `agent_ids` for a squad. Resume
+  validates that exact lineup and schedules it with `Simulation.assign_task`;
+  solo tasks still use the one-agent auto-select path.
+- A missing, busy, under-rated or role-incomplete lineup refuses the re-arm. The
+  rule is kept for a later retry, and the refusal changes neither rewards nor
+  the task count.
+- `App` passes the deployed lineup into the rule on squad deploy. Rebirth already
+  called `AutoRepeat.forget`; the device pass now covers that path too.
+- Four headless cases: the lineup survives save/load, resume uses the saved
+  lineup instead of a stronger auto-pick, and missing/busy members refuse
+  without a second payout.
+
+### Checks
+
+- 103/103 tests (99 before), validator `OK hero_hq`, `playthrough_demo.gd` PASS.
+- Android 35 x86_64, controlled saves, host clock untouched:
+  - UI-created rule: Teams deploy of the saved `[Volt, Support]` raid created
+    `task_1` and a rule carrying both ids; a force-stop/relaunch kept the
+    assignment, both activity locks and the reserve Support free. Making that
+    job due and relaunching paid 560 Credits + 5 Intel / 26 XP each once, then
+    re-armed `task_2` with `[Volt, Support]`; a quick reload kept 1560 / 5 /
+    one task and did not pay again.
+  - Seeded end-to-end: 1000 Credits plus a past-due raid, rule and manual preset.
+    Launch: 1560 / 5 / 1 task, `task_2` on `[Volt, Support]`, stronger reserve
+    free. Reload unchanged. A 125 s closed absence paid again to 2120 / 10 /
+    2 tasks and re-armed `task_3` with the same lineup.
+  - Missing member: Support was removed from the roster while the rule named
+    `[Volt, Support]`. Settlement paid once (1560 / 5 / 1), then no re-arm, no
+    substitution of the available reserve, and the rule stayed for a retry; a
+    reload stayed at 1560 / 5 / 1.
+  - Busy member: Support was active on another job while the rule named
+    `[Volt, Support]`. Settlement paid the due raid once (1560 / 5 / 1), the
+    other job stayed active, no re-arm occurred, and a reload did not pay again.
+  - Rebirth: with a rule, an active job and chips available, the two-step
+    Rebirth banked 4 chips, reset agents to level 1 and Credits to 50, cleared
+    the assignment and the automation rule, and preserved the squad preset and
+    research rank.
+
+### Known limitations
+
+- Emulator only; physical phone, release signing and icon remain.
+- Timed training still does not exist in v1.
+- A missing or busy lineup keeps its rule rather than alerting the player; the
+  next launch retries it.
+
 ## M1.8 — Offline progression and persisted auto-repeat (2026-11-04)
 
 Status: complete; headless and Android 35 emulator verified.
@@ -53,8 +111,8 @@ path, so a job that finished while the app was closed was never replaced.
 - Emulator only; no physical phone, release signing or icon yet.
 - Timed training does not exist in v1, so the "training in progress" case has no
   state to exercise.
-- The device automation run used a solo operation; squad auto-repeat shares the
-  same `Simulation.deploy` path but was not separately repeated on device.
+- Squad auto-repeat was not separately repeated at M1.8; M1.9 covers it and
+  fixes lineup persistence.
 
 ## M1.7 — Manual team lineups (2026-11-04)
 

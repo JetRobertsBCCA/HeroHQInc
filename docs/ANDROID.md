@@ -134,12 +134,36 @@ through the save file):
   not double-pay; an in-session completion then re-armed (1054 / 3 / 24), and
   the next relaunch settled once more and re-armed (1072 / 4 / 32)
 
+- squad auto-repeat (UI-created): deploying the saved `[Volt, Support]` raid
+  from Teams created `task_1` and an automation rule carrying both ids; a
+  force-stop/relaunch kept the assignment, both locks and the reserve Support
+  free. Making that job due and relaunching paid 560 Credits / 5 Intel / 26 XP
+  each once, then re-armed `task_2` with the same lineup; a quick reload kept
+  1560 / 5 / one task and did not pay again
+- squad auto-repeat (seeded): a past-due raid under a manual preset and rule
+  settled to 1560 / 5 / 1 and re-armed `task_2` on `[Volt, Support]`, leaving a
+  stronger reserve free; a reload was unchanged, and a 125 s closed absence
+  paid to 2120 / 10 / 2 and re-armed `task_3` on the same lineup
+- ineligible squads: with Support missing, or busy on another active job, the
+  due raid still paid exactly once (1560 / 5 / 1), no substitute was selected,
+  no re-arm happened, and the rule stayed for a later retry; reloads did not pay
+  again
+- rebirth clears automation: a two-step Rebirth with an active job and a
+  remembered rule banked 4 chips, reset agents to level 1 and Credits to 50,
+  cleared the assignment and `automation_rules`, and kept the squad preset and
+  research rank
+
 The rebirth test used a hand-seeded save (level and lifetime written into the
 profile) because reaching level 7 takes far longer than a scripted device run.
 Everything else was played through the UI.
 
 ## Device bugs found and fixed by this pass
 
+- **Squad auto-repeat ignored the saved lineup.** Resume went through
+  `Simulation.deploy`, which auto-selects the strongest free agents, so a
+  stronger reserve could replace the player's chosen member. Rules now store
+  and validate the exact `agent_ids`; a missing or busy member refuses the
+  re-arm instead of substituting, while a solo task still auto-selects.
 - **Auto-repeat forgot its task on relaunch.** The task chosen on deploy lived
   only in memory, so a bought automation rank stopped working after a force-stop.
   The choice is now a `repeat_task` rule in `automation_rules`, launch re-arms it
@@ -174,8 +198,7 @@ Everything else was played through the UI.
 ## Not done
 
 - Physical-device testing, release signing and an app icon.
-- Timed training (v1 training is instant) and a device pass for squad
-  auto-repeat.
+- Timed training (v1 training is instant).
 - Play Billing and any ad integration. The product rule is unchanged: no banner,
   interstitial, native or forced ads, ever; only a player-initiated, optionally
   watched rewarded ad may exist at M6.
