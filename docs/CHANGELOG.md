@@ -34,7 +34,7 @@ manual path.
 
 ### Checks
 
-- 110/110 tests (108 before), validator `OK hero_hq`, `playthrough_demo.gd` PASS,
+- 112/112 tests (110 before), validator `OK hero_hq`, `playthrough_demo.gd` PASS,
   `git diff --check` clean.
 - Two new core cases: a missing member refuses Retry without changing Credits,
   tasks or assignments, then a recovered member starts exactly one job with the
@@ -42,6 +42,12 @@ manual path.
 - Screen coverage asserts the button is visible only while paused, forwards one
   request, keeps the same reason after a refused retry, hides while armed, and
   hides once the replacement is running.
+- App-level bootstrap coverage boots the real composition root against an
+  isolated profile slot. It verifies the shell and timer, the Missions and Teams
+  Retry listeners, and that a blocked tap refreshes the tab without changing
+  state. A controlled recovered state then presses Retry and proves exactly one
+  assignment, no upfront payment, no second job from a second request, and one
+  completion payout/count.
 - Android 35 x86_64, controlled saves, host clock untouched:
   - Solo rating block: 500 Credits / Lv 3 / 240 XP / rating 110 / no assignments
     showed `Paused · Rooftop Pursuit`, `Available rating 110 / 120`, and Retry.
@@ -59,12 +65,13 @@ manual path.
 ### Known limitations
 
 - Emulator only; physical phone, release signing and icon remain.
-- The successful manual Retry tap was not isolated on the emulator. Training,
-  recruitment, settlement and launch all run the existing automatic retry in
-  same event that makes the rule eligible, so it starts before the player can
-  reach the button. The exact Retry call, one-job cap and no-payout behaviour are
-  covered headlessly; the device pass covers the visible button, a refused retry
-  and blocked-to-recovered through the automatic path.
+- The successful manual Retry tap is not reachable in ordinary emulator UI.
+  Training, recruitment, settlement and launch all run the existing automatic
+  retry in the same event that makes the rule eligible, so it starts before the
+  player can reach the button. The App-level headless test now boots the real
+  composition root and covers the successful tap, one-job cap and no-payout
+  behaviour; the device pass covers the visible button, a refused retry and
+  blocked-to-recovered through the automatic path.
 - Retry cannot cancel the operation holding a slot or change a saved lineup. It
   only rechecks the current state, so the same reason remains until that state
   changes.

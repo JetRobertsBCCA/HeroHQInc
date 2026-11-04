@@ -230,12 +230,15 @@ Everything else was played through the UI.
 
 ## Remaining device test gap
 
-The successful manual Retry tap is headless-only. Every normal recovery path —
-training, recruitment, settlement and launch — also runs the automatic retry in
-the same event that makes the rule eligible, so the rule has already started
-before a finger can reach the button. Headless tests call the exact Retry path
-and assert one assignment, no payout and the saved lineup; the device pass proves
-the button appears while blocked, a tap does not bypass the reason, and the
+The successful manual Retry tap is not reachable in ordinary UI. Every normal
+recovery path — training, recruitment, settlement and launch — also runs the
+automatic retry in the same event that makes the rule eligible, so the rule has
+already started before a finger can reach the button. This is now covered by an
+App-level headless test that boots the real composition root against an isolated
+profile, verifies both screen listeners, and performs a controlled successful
+Retry that starts exactly one assignment, pays nothing up front, refuses a
+second chain, and pays/counts exactly one completion. The device pass proves the
+button appears while blocked, a tap does not bypass the reason, and the
 blocked-to-recovered state through the automatic path.
 
 ## Not done

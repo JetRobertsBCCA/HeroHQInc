@@ -23,6 +23,9 @@ const EVENT_LOG_LIMIT := 4
 
 var _pack: GamePack
 var _state: GameState
+## Profile slot loaded by the composition root. Production uses the pack id;
+## tests override it before add_child so bootstrapping never touches a real save.
+var _profile_id: String = PACK_ID
 var _shell: ScreenShell
 var _clock: Clock = Clock.new()
 var _timer: Timer
@@ -58,7 +61,7 @@ func _exit_tree() -> void:
 
 
 func _restore_or_create_state() -> GameState:
-	var loaded := SaveService.load_state(PACK_ID)
+	var loaded := SaveService.load_state(_profile_id)
 	var existing: Variant = loaded.get("state", null)
 	if existing is GameState:
 		var state: GameState = existing
@@ -68,7 +71,9 @@ func _restore_or_create_state() -> GameState:
 		if state.agents.is_empty():
 			Simulation.seed_missing_starter_agents(state, _pack)
 		return state
-	return Simulation.new_state(_pack, STARTING_SEED, _clock.now_utc())
+	var fresh := Simulation.new_state(_pack, STARTING_SEED, _clock.now_utc())
+	fresh.game_id = _profile_id
+	return fresh
 
 
 ## Advances the simulation by the time the app was closed, and logs whatever
