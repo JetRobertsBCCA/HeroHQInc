@@ -120,14 +120,24 @@ func _best_task() -> String:
 	var best := ""
 	var best_income := 0.0
 	for task_id in _pack.task_ids():
-		var task := _pack.task(str(task_id))
-		if _current_rating() + 0.0001 < float(task.get("minimum_rating", 0)):
+		var id := str(task_id)
+		if not _deployable(id):
 			continue
-		var income := _income_per_minute(str(task_id))
+		var income := _income_per_minute(id)
 		if income > best_income:
 			best_income = income
-			best = str(task_id)
+			best = id
 	return best
+
+
+## Only tasks the roster can staff right now are candidates. Filtering on rating
+## alone let the model pick a squad job it had no roles for and stop there.
+func _deployable(task_id: String) -> bool:
+	var needed := maxi(int(_pack.task(task_id).get("required_agent_count", 1)), 1)
+	var selected := Simulation.auto_select_agents(_state, _pack, task_id)
+	if selected.size() < needed:
+		return false
+	return bool(Simulation.evaluate_assignment(_state, _pack, task_id, selected).get("ok", false))
 
 
 func _best_rate() -> float:

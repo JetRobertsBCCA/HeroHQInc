@@ -20,6 +20,7 @@ const REBIRTH_EARNINGS := 4000.0
 var _app: Control
 var _saved: Dictionary = {}
 var _failures: Array[String] = []
+var _completed := false
 
 
 func _initialize() -> void:
@@ -68,8 +69,9 @@ func _play() -> void:
 	_ok(_state().assignments.is_empty(), "the operation settles after its duration")
 	_ok(_state().resource("credits") > credits_start, "the reward is paid into the header resource")
 	_ok(_state().tasks_completed() == 1, "the completion is counted once")
+	_ok(_objective_step() == 2, "guidance moves past the first deployment")
 
-	# --- Heroes: train, then hire until a Tech arrives ----------------------
+	# --- Heroes: train, then hire a Tech through the role picker ------------
 	await _select_tab("heroes")
 	var roster := _roster()
 	_ok(roster != null, "heroes tab built the roster")
@@ -80,18 +82,12 @@ func _play() -> void:
 	_ok(float(_state().agents["hero_volt"]["xp"]) > 0.0, "training granted XP")
 
 	var recruit_start := _state().agents.size()
-	var tech := ""
-	var hires := 0
-	for _i in range(40):
-		if not tech.is_empty():
-			break
-		if not (await _recruit()):
-			break
-		hires += 1
-		tech = _first_agent_with_role("tech")
-	_ok(_state().agents.size() > recruit_start, "recruiting grows the roster")
-	_ok(hires > 0, "the recruit offer is usable")
-	_ok(not tech.is_empty(), "a Tech operative joins the roster")
+	# Screens are rebuilt on every refresh, so never hold one across an await.
+	_ok(_roster().recruit_role_option() != null, "the recruit panel offers a role picker")
+	_ok(await _recruit("tech"), "the role picker recruits")
+	_ok(_state().agents.size() == recruit_start + 1, "one hire adds exactly one operative")
+	var tech := _first_agent_with_role("tech")
+	_ok(not tech.is_empty(), "the requested Tech joins on the first hire")
 
 	if tech.is_empty():
 		return
@@ -170,6 +166,7 @@ func _play() -> void:
 	_ok(_state().agents.size() == roster_before, "the roster survives rebirth")
 	_ok(_state().assignments.is_empty(), "rebirth clears running operations")
 	_ok(int(_state().agents["hero_volt"].get("level", 1)) == 1, "rebirth resets levels")
+	_ok(_objective_step() == 2, "guidance re-arms for the new run")
 
 	# --- Persistence --------------------------------------------------------
 	var loaded := SaveService.load_state(PACK_ID)
@@ -178,10 +175,13 @@ func _play() -> void:
 	if restored != null:
 		_ok(restored.prestige_chips() > 0, "chips persist through a reload")
 		_ok(restored.agents.size() == roster_before, "the roster persists through a reload")
+	_completed = true
 
 
 func _finish() -> void:
 	print("")
+	# A runtime error aborts _play but not this function, so prove it reached the end.
+	_ok(_completed, "the playthrough reached the end")
 	if _failures.is_empty():
 		print("PASS in-game playthrough")
 	else:
@@ -233,9 +233,14 @@ func _train(agent_id: String) -> bool:
 	return true
 
 
-func _recruit() -> bool:
+func _recruit(role_id: String = "") -> bool:
 	var roster := _roster()
-	var button := roster.recruit_button() if roster != null else null
+	if roster == null:
+		_failures.append("no roster screen")
+		return false
+	roster.select_recruit_role(role_id)
+	await process_frame
+	var button := roster.recruit_button()
 	if button == null:
 		_failures.append("no recruit button")
 		return false
@@ -252,6 +257,15 @@ func _advance(seconds: int) -> void:
 	manual.advance(seconds)
 	_app.call("_on_tick")
 	await process_frame
+
+
+func _objective() -> Dictionary:
+	var value: Variant = _app.call("_next_objective")
+	return value if value is Dictionary else {}
+
+
+func _objective_step() -> int:
+	return int(_objective().get("step", 0))
 
 
 func _first_agent_with_role(role_id: String) -> String:

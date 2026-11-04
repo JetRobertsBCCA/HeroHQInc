@@ -104,7 +104,16 @@ func _build_branch_row(rules: Dictionary, resource: String) -> Control:
 			_pack.label("resources.%s" % resource, resource),
 		]
 		button.pressed.connect(func() -> void: research_purchase_requested.emit(branch_id))
+		button.disabled = _state.resource(resource) + 0.0001 < float(price)
 	column.add_child(button)
+	if not button.disabled or price < 0:
+		return column
+	var reason := _body_label(
+		_pack.label("ui.blocked_insufficient_resource", "Not enough resources")
+	)
+	reason.add_theme_font_size_override("font_size", 11)
+	reason.add_theme_color_override("font_color", ThemeTokens.color(_pack, "warning"))
+	column.add_child(reason)
 	return column
 
 

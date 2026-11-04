@@ -6,7 +6,7 @@ coordinated citywide agency while the player builds, trains and automates teams.
 
 - **Engine:** Godot **4.7.2** stable, GDScript, `gl_compatibility` renderer
 - **Target:** Android first, portrait, 360×640 logical canvas with safe-area insets
-- **Status:** Milestone **M1.2 (long-term curve + Command Rebirth)** complete — see [docs/CHANGELOG.md](docs/CHANGELOG.md)
+- **Status:** **v1 loop complete** (M1.5) — fresh save to rebirth, played end to end; see [docs/CHANGELOG.md](docs/CHANGELOG.md)
 - **Design source of truth:** `HERO_HQ_MASTER_CODEX.md` (see *Design document* below)
 
 ## Run it
@@ -45,52 +45,50 @@ No Android SDK, ad SDK or billing credentials are needed for anything above.
 
 ## Play the loop
 
-The M1 loop is playable from a fresh save, and the curve is tuned rather than
+The v1 loop is playable from a fresh save, and the curve is tuned rather than
 improvised. Volt starts at **rating 70** — `(power 5 + speed 5 + skill 4) × 5` —
 with 50 Credits, which is enough for one training session and no more.
 
-1. **Missions** lists six tasks. Each card shows stage, category, duration and
-   rating gate, plus what it pays. `Deploy` is disabled with the blocking reason
-   printed on the card (rating too low, no free hero).
-2. The ladder is paced so a new tier opens roughly every couple of minutes, and
-   each tier is worth about **1.5× the credits per minute** of the one before it:
-
-   | Task | Gate | Time | Pays | Rate |
-   |---|---|---|---|---|
-   | Alley Patrol | 60 | 20 s | 18 Credits | 54/min |
-   | Break-In Response | 80 | 30 s | 45 Credits | 90/min |
-   | Drone Swarm | 100 | 45 s | 95 Credits + 1 Intel | 128/min |
-   | Rooftop Pursuit | 120 | 60 s | 190 Credits + 2 Intel | 192/min |
-   | Convoy Ambush | 140 | 90 s | 430 Credits + 4 Intel | 289/min |
-   | Citywide Siege | 160 | 120 s | 900 Credits + 8 Intel | 454/min |
-
+1. **HQ** always names one concrete next step — deploy, train, recruit, research,
+   rebirth — derived from the live save, so a new player is never left guessing.
+   It re-arms itself after every Command Rebirth.
+2. **Missions** lists all fifteen operations: twelve solo jobs and three squad
+   jobs, gates from **60 to 185**, durations from 20 seconds to 4 minutes, and
+   payouts from 18 to 2,400 Credits plus Intel. Each card shows stage, category,
+   duration and gate, and `Deploy` is disabled with the blocking reason printed
+   on it (rating too low, no free hero, missing role).
 3. **Heroes** shows rating, level, XP bar and `Train` (25 Credits for +40 XP,
-   cost ×1.4 per level). Volt gains +20 rating per level, so each level unlocks
-   exactly one new tier — 70 at level 1, 90 at level 2, and so on.
-4. A deployed card moves to **Active operations** with a live countdown. When it
-   reaches zero the task pays out, the hero is freed and the result is logged on
-   the HQ tab.
-5. Close the app mid-task and reopen it later: the same settlement call finishes
-   the task on launch, capped at the pack's 8-hour allowance.
+   cost ×1.4 per level). The starter gains +20 rating per level, so early levels
+   open new tiers quickly. Recruitment draws from 200 named slots, costs 50
+   Credits with ×1.03 growth, and has a **role picker**: choose Tech and the next
+   affordable hire is a Tech, instead of hoping the pool rolls one.
+4. A deployed operation moves to **Active operations** with a live countdown.
+   When it reaches zero it pays out, the heroes are freed and the result is
+   logged on the HQ tab.
+5. **Teams** previews every squad operation against the current roster — members,
+   individual and average ratings against the gate, missing roles, and the exact
+   blocking reason — and saves one lineup per operation.
+6. Close the app mid-operation and reopen it later: the same settlement call
+   finishes it on launch, capped at the pack's 8-hour allowance.
 
-Measured with `tooling/balance_report.gd`, a greedy first session reaches the six
-tiers at roughly **0:00, 0:40, 2:10, 5:10, 8:10 and 11:10**, and levels then keep
-slowing (15:10, 21:10, 29:10, 41:10, 59:10). That shape is deliberate: quick first
-win, a visible power spike per tier, and a decaying cadence after the content runs
-out — see the balance note in [docs/CHANGELOG.md](docs/CHANGELOG.md).
+Measured with `tooling/balance_report.gd`, one greedy agent — the model recruits
+nobody, so this is a lower bound — plays **2 hours**, completes **68**
+operations, reaches **level 13** and earns **51,871 Credits**.
 
 ### Rebirth: the long-term loop
 
-Six tasks cannot carry a week on their own, so the loop above is a *run*. Once the
+One ladder cannot carry a week on its own, so the loop above is a *run*. Once the
 save has earned **4,000 Credits lifetime** and Volt reaches **level 7**, the
-**Upgrades** tab offers a Command Rebirth: the run resets (level, training,
-Credits, assignments) and the save banks chips that permanently multiply every
-payout by `1 + 0.05 × chips`. Chips are derived from lifetime earnings with a
-sub-linear exponent, so each rebirth needs several times the previous progress to
-double — runs lengthen instead of collapsing into a reset treadmill.
+**Upgrades** tab offers a Command Rebirth: levels, training, Credits and running
+operations reset, the roster is kept and rewound to its base ratings, and the
+save banks chips that permanently multiply every payout by `1 + 0.05 × chips`.
+Research ranks also survive, so each run starts from a stronger baseline. Chips
+are derived from lifetime earnings with a sub-linear exponent, so each rebirth
+needs several times the previous progress to double — runs lengthen instead of
+collapsing into a reset treadmill.
 
-Measured over seven days with `tooling/long_run_report.gd`: 205 rebirths, runs
-growing from ~17 minutes to ~1 hour, ×11.40 on payouts, and **no single wait over
+Measured over seven days with `tooling/long_run_report.gd`: 207 rebirths, runs
+growing from ~15 minutes to ~1 hour, ×11.45 on payouts, and **no single wait over
 14 minutes**. The formulas, the sweep behind them and the tuning knobs are in
 [docs/BALANCE.md](docs/BALANCE.md).
 
@@ -102,7 +100,8 @@ code in `framework/`.
 ```text
 project.godot              entry point, portrait/stretch/orientation settings
 framework/                 shared, game-neutral engine (never names a title)
-  core/                    game_state, clock, simulation, agent_rules, prestige, save
+  core/                    game_state, clock, simulation, agent_rules,
+                           recruitment, research, squads, prestige, save
   content/                 pack loader, pack object, pack validator + content checks
   ui/                      theme tokens, text formatting, portrait shell, resource bar
     screens/               task board, roster, team and rebirth screens
@@ -118,6 +117,7 @@ tooling/validate_packs.gd  CLI pack validator (CI gate)
 tooling/demo_loop.gd       headless walkthrough of the loop
 tooling/balance_report.gd  greedy pacing simulation + curve report
 tooling/long_run_report.gd 7-day rebirth model + boredom-budget check
+tooling/playthrough_demo.gd  real-UI playthrough, fresh save to rebirth
 tooling/ui_capture.gd      windowed PNG capture of every tab
 ```
 
@@ -130,10 +130,13 @@ fails the build if that rule is broken.
 Working now: the loop end to end — deploy, settle (online and offline), earn,
 level up, train, recruit, research, rebirth, save, resume — on validated pack
 data, with an invalid pack rendering a readable error screen instead of crashing.
-The Teams tab previews every squad operation against the current roster: the
-members, their individual and average ratings against the gate, any missing
-role, and the exact blocking reason when it cannot deploy. A lineup can be saved
-per operation, updated after training, or cleared to return to auto-selection.
+Recruitment can target a role, HQ names the next objective, and Upgrades spends
+Intel on payout and training research plus an automation rank that repeats the
+last operation once per completion. The Teams tab previews every squad operation
+against the current roster: the members, their individual and average ratings
+against the gate, any missing role, and the exact blocking reason when it cannot
+deploy. A lineup can be saved per operation, updated after training, or cleared
+to return to auto-selection.
 
 Not implemented yet: manual per-slot team building, the remaining automation and
 focus layers, monetization (M6), Android export and device testing (M7).

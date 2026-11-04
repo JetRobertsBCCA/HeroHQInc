@@ -3,6 +3,65 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.5 — Playable v1: guidance, role hiring, honest checks (2026-11-04)
+
+Status: complete. Content version stays 2; no new operations or tuning blocks.
+
+### What was wrong
+
+Three defects could end a run instead of slowing it:
+
+- Role-gated operations (Signal Pursuit needs a Tech, Joint Raid needs Support)
+  could stall the ladder. Recruits were drawn uniformly from a 200-slot pool, so
+  a player could hire twenty agents and never roll the one role the next
+  operation demanded.
+- A fresh save explained nothing. HQ drew a network and a status row; the only
+  instruction was implicit in whichever button happened to look enabled.
+- Research ranks in Upgrades stayed tappable when Intel could not pay for them,
+  so a tap did nothing and said nothing.
+
+The end-to-end demo had two blind spots of its own: it hired randomly until a
+Tech appeared, so it never exercised the picker, and a runtime error inside the
+playthrough still printed PASS because the failure list stayed empty.
+
+### What changed
+
+- `Recruitment.recruit` takes an optional role id. A targeted hire scans forward
+  from the next unclaimed slot and **skips** slots that do not match, so the
+  player trades breadth for certainty rather than paying twice. A pool with no
+  such role returns `role_unavailable` instead of silently spending.
+- `RosterScreen` gains a role picker (`Any role` plus every declared role); the
+  choice travels with `recruit_requested(role_id)` and the offer, price and
+  blocked reason follow it.
+- `app.gd` derives a five-step **Next objective** card from live state — deploy,
+  train to level 2, recruit a second operative, buy a research rank, rebirth —
+  so HQ always names one thing to do next. It re-arms after a rebirth.
+- `PrestigeScreen` disables a research rank it cannot pay for and prints why.
+- `tooling/playthrough_demo.gd` hires its Tech through the picker, asserts one
+  hire is enough, checks the objective advances and re-arms after rebirth, and
+  fails when the run does not reach the end.
+- `tooling/balance_report.gd` considers only operations the roster can staff;
+  filtering on rating alone had it pick a squad job with no roles available and
+  stop at 2:00 of a two-hour horizon.
+
+### Checks
+
+- 92/92 tests (three new: targeted hire, every declared role targetable, picker
+  signal carries the role).
+- `playthrough_demo.gd` PASS from a deleted profile — a genuine fresh save —
+  through the role gate, research, rebirth and a save/reload.
+- `balance_report.gd`: 2:01 h, 68 operations, level 13, 51,871 Credits earned.
+- `long_run_report.gd` PASS: 207 runs, ×11.45, longest single wait 14m 00s.
+- Validator `OK hero_hq`; windowed capture of all five tabs at 360×640.
+
+### Known limitations
+
+- No Android export preset, keystore or device run: the loop is verified in a
+  360×640 desktop window, not on a phone.
+- Teams deploys auto-selected squads plus one saved lineup per operation;
+  choosing members slot by slot is not built.
+- Ads and billing remain untouched by design.
+
 ## M1.4 — Saved squad lineups (2026-11-04)
 
 Status: complete. No content change.

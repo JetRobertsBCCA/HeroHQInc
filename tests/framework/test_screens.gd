@@ -82,9 +82,26 @@ func test_roster_offers_an_affordable_first_recruit() -> void:
 	assert_true(button != null, "a recruit offer is shown")
 	assert_false(button.disabled, "the first recruit is affordable with starting funds")
 	var received: Array = []
-	roster.recruit_requested.connect(func() -> void: received.append(1))
+	roster.recruit_requested.connect(func(role_id: String) -> void: received.append(role_id))
 	button.emit_signal("pressed")
 	assert_eq(received.size(), 1, "pressing recruit emits exactly one request")
+	roster.free()
+
+
+func test_roster_targets_a_recruit_role() -> void:
+	var pack := _pack()
+	var state := Simulation.new_state(pack, 1, 1000)
+	state.resources["credits"] = 1000.0
+	var roster := RosterScreen.new()
+	roster.refresh(pack, state)
+	assert_true(roster.recruit_role_option() != null, "the recruit panel offers a role picker")
+	roster.select_recruit_role("tech")
+	assert_eq(roster.recruit_role(), "tech", "the chosen role sticks")
+	var received: Array = []
+	roster.recruit_requested.connect(func(role_id: String) -> void: received.append(role_id))
+	roster.recruit_button().emit_signal("pressed")
+	assert_eq(received.size(), 1, "recruiting emits one request")
+	assert_eq(str(received[0]), "tech", "the request carries the chosen role")
 	roster.free()
 
 

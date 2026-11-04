@@ -6,7 +6,7 @@ extends Control
 ## blocks simply shows no control instead of a dead button.
 
 signal train_requested(agent_id: String)
-signal recruit_requested()
+signal recruit_requested(role_id: String)
 
 const MIN_TAP_HEIGHT := 48
 ## A 240-slot roster does not need 240 live rows to be usable, and building
@@ -19,6 +19,8 @@ var _root: VBoxContainer
 var _list: VBoxContainer
 var _recruit_box: VBoxContainer
 var _recruit_button: Button
+var _recruit_role_option: OptionButton
+var _recruit_role: String = ""
 var _buttons: Dictionary = {}
 
 
@@ -35,6 +37,21 @@ func train_button(agent_id: String) -> Button:
 
 func recruit_button() -> Button:
 	return _recruit_button
+
+
+func recruit_role_option() -> OptionButton:
+	return _recruit_role_option
+
+
+func recruit_role() -> String:
+	return _recruit_role
+
+
+## Chooses the role the next recruit should have. An empty id means any role.
+func select_recruit_role(role_id: String) -> void:
+	_recruit_role = role_id
+	if _pack != null and _state != null:
+		_refresh_recruitment()
 
 
 func refresh(pack: GamePack, state: GameState) -> void:
@@ -188,19 +205,62 @@ func _refresh_recruitment() -> void:
 		_recruit_box.remove_child(child)
 		child.queue_free()
 	_recruit_button = null
+	_recruit_role_option = null
 	if not Recruitment.enabled(_pack):
 		_recruit_box.get_parent().visible = false
 		return
 	_recruit_box.get_parent().visible = true
-	var candidate := Recruitment.next_candidate(_state, _pack)
-	if candidate.is_empty():
-		return
 
 	var heading := Label.new()
 	heading.text = _pack.label("ui.recruit", "Recruit")
 	heading.add_theme_font_size_override("font_size", 14)
 	heading.add_theme_color_override("font_color", ThemeTokens.color(_pack, "accent"))
 	_recruit_box.add_child(heading)
+
+	# Without this the ladder can stall on a single missing role: a uniform pool
+	# may take dozens of hires to produce the one role the next operation needs.
+	var role_row := HBoxContainer.new()
+	role_row.add_theme_constant_override("separation", 8)
+	var role_label := Label.new()
+	role_label.text = _pack.label("ui.recruit_role", "Role")
+	role_label.add_theme_font_size_override("font_size", 11)
+	role_label.add_theme_color_override("font_color", ThemeTokens.color(_pack, "muted"))
+	role_row.add_child(role_label)
+
+	_recruit_role_option = OptionButton.new()
+	_recruit_role_option.name = "RecruitRole"
+	_recruit_role_option.custom_minimum_size = Vector2(0, MIN_TAP_HEIGHT)
+	_recruit_role_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_recruit_role_option.add_item(_pack.label("ui.any_role", "Any role"))
+	_recruit_role_option.set_item_metadata(0, "")
+	var selected_index := 0
+	var role_ids: Array = _pack.roles.keys()
+	role_ids.sort()
+	for raw_role in role_ids:
+		var role_id := str(raw_role)
+		var index := _recruit_role_option.item_count
+		_recruit_role_option.add_item(
+			_pack.label(str(_pack.role(role_id).get("name_key", "")), role_id)
+		)
+		_recruit_role_option.set_item_metadata(index, role_id)
+		if role_id == _recruit_role:
+			selected_index = index
+	_recruit_role_option.select(selected_index)
+	_recruit_role_option.item_selected.connect(_on_recruit_role_selected)
+	role_row.add_child(_recruit_role_option)
+	_recruit_box.add_child(role_row)
+
+	var candidate := Recruitment.next_candidate_for_role(_state, _pack, _recruit_role)
+	if candidate.is_empty():
+		var unavailable := Label.new()
+		unavailable.text = _pack.label(
+			"ui.blocked_role_unavailable", "No recruit of that role is available"
+		)
+		unavailable.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		unavailable.add_theme_font_size_override("font_size", 11)
+		unavailable.add_theme_color_override("font_color", ThemeTokens.color(_pack, "warning"))
+		_recruit_box.add_child(unavailable)
+		return
 
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 8)
@@ -254,8 +314,14 @@ func _refresh_recruitment() -> void:
 		_recruit_box.add_child(reason)
 
 
+func _on_recruit_role_selected(index: int) -> void:
+	if _recruit_role_option == null:
+		return
+	select_recruit_role.call_deferred(str(_recruit_role_option.get_item_metadata(index)))
+
+
 func _on_recruit_pressed() -> void:
-	recruit_requested.emit()
+	recruit_requested.emit(_recruit_role)
 
 
 func _on_train_pressed(agent_id: String) -> void:

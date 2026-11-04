@@ -22,6 +22,7 @@ extends RefCounted
 const ERROR_UNAVAILABLE := "recruitment_unavailable"
 const ERROR_ROSTER_FULL := "roster_full"
 const ERROR_INSUFFICIENT := "insufficient_resource"
+const ERROR_ROLE_UNAVAILABLE := "role_unavailable"
 
 const DEFAULT_FILLER_FORMAT := "Reserve Operative %d"
 const DEFAULT_BASE_COST := 50.0
@@ -148,7 +149,17 @@ static func next_index(state: GameState) -> int:
 
 ## The slot the next recruit would claim, with its current price.
 static func next_candidate(state: GameState, pack: GamePack) -> Dictionary:
-	var index := next_index(state)
+	return next_candidate_for_role(state, pack, "")
+
+
+## The slot a role-targeted recruit would claim, with its current price.
+## Returns {} when no slot of that role exists inside the scan window.
+static func next_candidate_for_role(
+	state: GameState, pack: GamePack, role_id: String
+) -> Dictionary:
+	var index := _find_slot(state, pack, role_id, next_index(state))
+	if index < 0:
+		return {}
 	var rules := candidate(pack, index)
 	if rules.is_empty():
 		return {}
@@ -157,16 +168,25 @@ static func next_candidate(state: GameState, pack: GamePack) -> Dictionary:
 
 
 ## Spends the pool's resource and adds the next recruit to the roster.
-## Returns {ok, code, details, agent_id, name, cost, resource_id, rating, tier_id}.
-static func recruit(state: GameState, pack: GamePack) -> Dictionary:
+##
+## An empty `role_id` means "any role". Otherwise the pool is scanned forward
+## for the next slot of that role, and the slots passed over are skipped: the
+## player trades breadth for certainty. Returns
+## {ok, code, details, agent_id, name, cost, resource_id, rating, tier_id}.
+static func recruit(state: GameState, pack: GamePack, role_id: String = "") -> Dictionary:
 	if not enabled(pack):
 		return _problem(ERROR_UNAVAILABLE, "This pack declares no recruit pool.")
 	if state.agents.size() >= capacity(pack):
 		return _problem(ERROR_ROSTER_FULL, "The roster is full at %d." % capacity(pack))
-	var index := next_index(state)
+	if not role_id.is_empty() and not pack.roles.has(role_id):
+		return _problem(ERROR_ROLE_UNAVAILABLE, "Role '%s' is not part of this pack." % role_id)
+	var index := _find_slot(state, pack, role_id, next_index(state))
+	if index < 0:
+		return _problem(
+			ERROR_ROLE_UNAVAILABLE if not role_id.is_empty() else ERROR_UNAVAILABLE,
+			"No recruit of role '%s' is available." % role_id,
+		)
 	var rules := candidate(pack, index)
-	if rules.is_empty():
-		return _problem(ERROR_UNAVAILABLE, "No recruit is available.")
 	var price := cost(state, pack, index)
 	var resource := resource_id(pack)
 	if state.resource(resource) + 0.0001 < float(price):
@@ -176,17 +196,6 @@ static func recruit(state: GameState, pack: GamePack) -> Dictionary:
 				str(rules["name"]), price, resource, state.resource(resource),
 			],
 		)
-
-	# A hand-edited save can already hold the id this slot would claim; skip
-	# forward deterministically instead of overwriting an existing agent.
-	var scanned := 0
-	while state.agents.has(str(rules["id"])) and scanned < MAX_CANDIDATE_SCAN:
-		index += 1
-		scanned += 1
-		rules = candidate(pack, index)
-		price = cost(state, pack, index)
-	if state.agents.has(str(rules["id"])):
-		return _problem(ERROR_ROSTER_FULL, "The roster holds every available recruit.")
 
 	state.resources[resource] = state.resource(resource) - float(price)
 	state.agents[str(rules["id"])] = {
@@ -214,6 +223,25 @@ static func recruit(state: GameState, pack: GamePack) -> Dictionary:
 		"rating": rules["rating"],
 		"tier_id": rules["tier_id"],
 	}
+
+
+## First slot at or after `start` whose id is free and whose role matches.
+## An empty role matches any slot; -1 means none was found in the scan window.
+static func _find_slot(
+	state: GameState, pack: GamePack, role_id: String, start: int
+) -> int:
+	var index := maxi(start, 0)
+	var scanned := 0
+	while scanned < MAX_CANDIDATE_SCAN:
+		var rules := candidate(pack, index)
+		if rules.is_empty():
+			return -1
+		if not state.agents.has(str(rules["id"])):
+			if role_id.is_empty() or str(rules.get("role_id", "")) == role_id:
+				return index
+		index += 1
+		scanned += 1
+	return -1
 
 
 static func _candidate_name(config: Dictionary, index: int) -> String:

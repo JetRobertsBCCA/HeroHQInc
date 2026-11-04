@@ -98,6 +98,38 @@ func test_reserves_are_numbered_beyond_the_named_pool() -> void:
 	assert_eq(str(Recruitment.candidate(pack, 200)["id"]), "op_0201", "reserve ids keep counting")
 
 
+func test_role_targeting_recruits_the_next_matching_slot() -> void:
+	var pack := _pack()
+	var state := _state(pack)
+	var preview := Recruitment.next_candidate_for_role(state, pack, "tech")
+	assert_false(preview.is_empty(), "a tech slot exists in the pool")
+	var result := Recruitment.recruit(state, pack, "tech")
+	assert_true(result.get("ok", false), "a role-targeted recruit succeeds")
+	assert_eq(
+		str(state.agents[str(result["agent_id"])].get("role_id", "")),
+		"tech",
+		"the recruit has the requested role",
+	)
+	assert_eq(str(result["agent_id"]), str(preview["id"]), "the preview matches the recruit")
+	assert_eq(int(result["cost"]), int(preview["cost"]), "the preview price matches")
+
+
+func test_every_declared_role_can_be_targeted() -> void:
+	var pack := _pack()
+	for raw_role in pack.roles.keys():
+		var state := _state(pack)
+		var role_id := str(raw_role)
+		assert_false(
+			Recruitment.next_candidate_for_role(state, pack, role_id).is_empty(),
+			"role '%s' is reachable in the pool" % role_id,
+		)
+	assert_eq(
+		str(Recruitment.recruit(_state(pack), pack, "not_a_role").get("code", "")),
+		Recruitment.ERROR_ROLE_UNAVAILABLE,
+		"an unknown role is refused",
+	)
+
+
 func test_pool_is_optional() -> void:
 	var pack := _pack()
 	pack.recruit_pool = {}

@@ -202,8 +202,8 @@ func _on_train_requested(agent_id: String) -> void:
 	_refresh_content()
 
 
-func _on_recruit_requested() -> void:
-	var result := Recruitment.recruit(_state, _pack)
+func _on_recruit_requested(role_id: String) -> void:
+	var result := Recruitment.recruit(_state, _pack, role_id)
 	if not result.get("ok", false):
 		_log("%s: %s" % [
 			_pack.label("ui.recruit", "Recruit"),
@@ -316,6 +316,7 @@ func _build_hq_content() -> Control:
 	column.add_theme_constant_override("separation", 10)
 	scroll.add_child(column)
 
+	column.add_child(_build_objective_card())
 	column.add_child(_build_network_card())
 	column.add_child(_info_row(
 		_pack.label("ui.roster_active"),
@@ -329,6 +330,87 @@ func _build_hq_content() -> Control:
 	column.add_child(_info_row(_pack.label("ui.status"), status_text))
 	column.add_child(_recent_events_panel())
 	return scroll
+
+
+## First-run guidance: one concrete next step, derived from live state so it
+## cannot drift from what the game actually needs.
+func _next_objective() -> Dictionary:
+	var first_branch := ""
+	var branches: Array = Research.branches(_pack)
+	if not branches.is_empty() and branches[0] is Dictionary:
+		first_branch = str((branches[0] as Dictionary).get("id", ""))
+	if _state.tasks_completed() == 0:
+		return {
+			"step": 1,
+			"done": false,
+			"text": _pack.label("ui.objective_deploy", "Deploy your first operation from Missions."),
+		}
+	if Prestige.highest_level(_state) < 2:
+		return {
+			"step": 2,
+		"done": false,
+			"text": _pack.label("ui.objective_train", "Train an operative to level 2 in Heroes."),
+		}
+	if _state.agents.size() < 2:
+		return {
+			"step": 3,
+			"done": false,
+			"text": _pack.label("ui.objective_recruit", "Recruit a second operative in Heroes."),
+		}
+	if not first_branch.is_empty() and Research.rank(_state, first_branch) == 0:
+		return {
+			"step": 4,
+			"done": false,
+			"text": _pack.label("ui.objective_research", "Buy your first Research rank in Upgrades."),
+		}
+	if _state.prestige_chips() == 0:
+		return {
+			"step": 5,
+			"done": false,
+			"text": _pack.label(
+				"ui.objective_rebirth",
+				"Reach level %d and %d lifetime Credits, then Rebirth in Upgrades."
+			) % [Prestige.min_level(_pack), int(Prestige.threshold_amount(_pack))],
+		}
+	return {
+		"step": 5,
+		"done": true,
+		"text": _pack.label(
+			"ui.objective_done", "Starter goals complete — push the ladder, bank chips, repeat."
+		),
+	}
+
+
+func _build_objective_card() -> Control:
+	var objective := _next_objective()
+	var panel := PanelContainer.new()
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 4)
+	panel.add_child(column)
+
+	var heading := Label.new()
+	heading.text = _pack.label("ui.objective_title", "Next objective")
+	heading.add_theme_font_size_override("font_size", 12)
+	heading.add_theme_color_override("font_color", ThemeTokens.color(_pack, "muted"))
+	column.add_child(heading)
+
+	var text := Label.new()
+	text.text = str(objective.get("text", ""))
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text.add_theme_color_override("font_color", ThemeTokens.color(_pack, "accent"))
+	column.add_child(text)
+
+	var progress := Label.new()
+	if bool(objective.get("done", false)):
+		progress.text = _pack.label("ui.objective_complete", "Complete")
+	else:
+		progress.text = "%s %d / 5" % [
+			_pack.label("ui.objective_step", "Step"), int(objective.get("step", 1)),
+		]
+	progress.add_theme_font_size_override("font_size", 11)
+	progress.add_theme_color_override("font_color", ThemeTokens.color(_pack, "muted"))
+	column.add_child(progress)
+	return panel
 
 
 func _build_network_card() -> Control:
