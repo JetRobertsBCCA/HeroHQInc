@@ -118,6 +118,10 @@ func _best_task() -> String:
 		var task := _pack.task(str(task_id))
 		if _current_rating() + 0.0001 < float(task.get("minimum_rating", 0)):
 			continue
+		# Role-gated operations are content the roster may not cover yet; the
+		# demo plays one agent, so it can only take what that agent can staff.
+		if Simulation.auto_select_agents(_state, _pack, str(task_id)).is_empty():
+			continue
 		var income := _income_per_minute(str(task_id))
 		if income > best_income:
 			best_income = income
