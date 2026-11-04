@@ -23,7 +23,7 @@ var _current_tab: String = ""
 func build(pack: GamePack) -> void:
 	_pack = pack
 	theme = ThemeTokens.build_theme(pack)
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	UILayout.fill(self)
 
 	for child in get_children():
 		remove_child(child)
@@ -31,12 +31,12 @@ func build(pack: GamePack) -> void:
 
 	var background := ColorRect.new()
 	background.color = ThemeTokens.color(pack, "background")
-	background.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UILayout.fill(background)
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background)
 
 	var safe_margin := MarginContainer.new()
-	safe_margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UILayout.fill(safe_margin)
 	safe_margin.name = "SafeArea"
 	add_child(safe_margin)
 
@@ -158,6 +158,19 @@ func _apply_safe_area() -> void:
 	var screen_size := Vector2(DisplayServer.screen_get_size())
 	if screen_size.x <= 0.0 or screen_size.y <= 0.0:
 		return
+	# The safe area is reported in screen pixels and is only meaningful when the
+	# window spans the display (phones, fullscreen). A desktop window is a small
+	# rectangle on a large monitor, so scaling the screen inset into it would
+	# invent a huge fake notch.
+	var mode := DisplayServer.window_get_mode()
+	var fullscreen := mode == DisplayServer.WINDOW_MODE_FULLSCREEN \
+		or mode == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
+	if not fullscreen and (
+		window_size.x < screen_size.x - 2.0 or window_size.y < screen_size.y - 2.0
+	):
+		_apply_margins(safe_margin, 0, 0, 0, 0)
+		return
+
 	var safe_area := Rect2(DisplayServer.get_display_safe_area())
 	var left := (safe_area.position.x / screen_size.x) * window_size.x
 	var top := (safe_area.position.y / screen_size.y) * window_size.y

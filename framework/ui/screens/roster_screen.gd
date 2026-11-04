@@ -78,9 +78,9 @@ func refresh(pack: GamePack, state: GameState) -> void:
 func _ensure_built() -> void:
 	if _root != null:
 		return
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	UILayout.fill(self)
 	var scroll := ScrollContainer.new()
-	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UILayout.fill(scroll)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
 	_root = VBoxContainer.new()

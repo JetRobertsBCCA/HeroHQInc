@@ -76,10 +76,16 @@ func _build_branch_row(rules: Dictionary, resource: String) -> Control:
 	var name_label := _body_label(_pack.label(str(rules.get("label_key", "")), branch_id))
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(name_label)
-	var rank_label := _body_label("%s %d / %d" % [
+	# A wrapping label has zero minimum width, so an HBox will squeeze it to a
+	# single character column. The rank must keep its natural width.
+	var rank_label := Label.new()
+	rank_label.text = "%s %d / %d" % [
 		_pack.label("ui.research_rank", "Rank"), current, maximum,
-	])
+	]
 	rank_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	rank_label.size_flags_horizontal = Control.SIZE_SHRINK_END
+	rank_label.add_theme_font_size_override("font_size", 11)
+	rank_label.add_theme_color_override("font_color", ThemeTokens.color(_pack, "muted"))
 	header.add_child(rank_label)
 	column.add_child(header)
 
@@ -166,9 +172,9 @@ func _refresh_rebirth() -> void:
 func _ensure_built() -> void:
 	if _root != null:
 		return
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	UILayout.fill(self)
 	var scroll := ScrollContainer.new()
-	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UILayout.fill(scroll)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
 	_root = VBoxContainer.new()

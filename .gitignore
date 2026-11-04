@@ -11,3 +11,6 @@ export_presets.cfg
 # OS noise
 .DS_Store
 Thumbs.db
+
+# Local UI captures
+ui_shots/

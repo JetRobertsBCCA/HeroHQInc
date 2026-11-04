@@ -3,6 +3,45 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.3 — Playable UI pass and squad screen (2026-11-04)
+
+Status: complete. No content change.
+
+### What was wrong
+
+The game window drew only its header and tab bar. `ScreenShell` sized itself
+with `set_anchors_preset`, which preserves a control's current (zero) size, so
+the content slot was 0 px tall and every screen that passed its headless tests
+drew nothing. Switching to `set_anchors_and_offsets_preset` then centred the
+column at its minimum size, because that helper defaults to minimum-size mode
+rather than fill.
+
+The shell also treated the desktop monitor's Windows safe area as a phone notch:
+a `(1080, 472)` inset on a 2560×1440 display scaled into the 360×640 window
+produced 151 px left and 209 px top margins.
+
+### What changed
+
+- `framework/ui/ui_layout.gd`: `UILayout.fill` sets full-rect anchors and zeroes
+the offsets, which is what filling a parent actually requires.
+- `ScreenShell`, `TaskBoard`, `RosterScreen`, `PrestigeScreen` and the app root
+  use it. Safe-area insets apply only when the window spans the display (phone
+  or fullscreen), so a desktop window gets none.
+- Research rows keep a non-wrapping rank label; a wrapping label in an HBox has
+  zero minimum width and was squeezed into a one-character column.
+- `framework/ui/screens/team_screen.gd`: the Teams tab lists every multi-agent
+  operation with its required roles, the auto-selected squad with individual
+  ratings, the squad average against the gate, missing roles and the blocking
+  reason. Deployment uses the same `Simulation.deploy` path as Missions.
+- `tooling/ui_capture.gd`: windowed capture of every tab at 360×640, with the
+  player's save backed up and restored, for visual checks the headless suite
+  cannot make.
+
+### Checks
+
+- Windowed capture at 360×640 on the RTX 4060: all five tabs render.
+- `playthrough_demo.gd` PASS; 83/83 tests; validator `OK hero_hq`.
+
 ## M1.2.1 — Roster survives rebirth, in-game playthrough (2026-11-04)
 
 Status: complete. No content change.
@@ -253,7 +292,8 @@ Status: complete, gate met in a headless environment. Not yet verified on Androi
 - [x] App scene: loads and validates the pack, restores or creates state, settles
       absence through the shared simulation path, saves, then builds the themed
       shell with pack-driven tabs and an HQ placeholder that draws an operations
-      network from live roster data.
+      network from live roster data. Invalid packs render a readable error screen
+      instead of crashing.
 - [x] Headless test runner (`tests/run_tests.gd`) with a dependency-free assertion
       harness and 31 tests over simulation, saves, pack validation, pack loading,
       theming, the tab shell, and framework neutrality.

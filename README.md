@@ -35,6 +35,9 @@ godot --headless --path . -s res://tooling/long_run_report.gd
 
 # play the whole game through the real UI, then restore your save
 godot --headless --path . -s res://tooling/playthrough_demo.gd
+
+# capture every tab to PNG at 360x640 (windowed, restores your save)
+godot --path . --resolution 360x640 -s res://tooling/ui_capture.gd
 ```
 
 Downloads for the pinned engine: <https://godotengine.org/download/linux/>.
@@ -102,7 +105,7 @@ framework/                 shared, game-neutral engine (never names a title)
   core/                    game_state, clock, simulation, agent_rules, prestige, save
   content/                 pack loader, pack object, pack validator + content checks
   ui/                      theme tokens, text formatting, portrait shell, resource bar
-    screens/               task board, roster screen, rebirth screen
+    screens/               task board, roster, team and rebirth screens
     components/            resource bar widget
 games/hero_hq/             HERO//HQ content pack — game #1
   manifest.json            5 tabs, credits/intel, 8h offline cap, data paths
@@ -115,6 +118,7 @@ tooling/validate_packs.gd  CLI pack validator (CI gate)
 tooling/demo_loop.gd       headless walkthrough of the loop
 tooling/balance_report.gd  greedy pacing simulation + curve report
 tooling/long_run_report.gd 7-day rebirth model + boredom-budget check
+tooling/ui_capture.gd      windowed PNG capture of every tab
 ```
 
 **Dependency direction:** `games/* -> framework/*`. The framework never imports a
@@ -123,14 +127,16 @@ fails the build if that rule is broken.
 
 ## What works and what does not
 
-Working now: the M1 loop above end to end — deploy, settle (online and offline),
-earn, level up, train, save, resume — on validated pack data, with an invalid pack
-rendering a readable error screen instead of crashing.
+Working now: the loop end to end — deploy, settle (online and offline), earn,
+level up, train, recruit, research, rebirth, save, resume — on validated pack
+data, with an invalid pack rendering a readable error screen instead of crashing.
+The Teams tab previews every squad operation against the current roster: the
+auto-selected members, their individual and average ratings against the gate,
+any missing role, and the exact blocking reason when it cannot deploy.
 
-Not implemented yet: recruitment, squads/teams, upgrades (the Upgrades tab now
-hosts rebirth), automation, focus, monetization (M6), Android export and device
-testing (M7). The Teams tab still shows a placeholder rather than pretending to
-have live logic.
+Not implemented yet: saved squad presets and manual team building, the remaining
+automation/focus layers, monetization (M6), Android export and device testing
+(M7).
 
 ## Non-negotiable product rules
 

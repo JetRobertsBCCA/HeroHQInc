@@ -14,6 +14,7 @@ const STARTING_SEED := 1
 const HOME_TAB := "hq"
 const HEROES_TAB := "heroes"
 const MISSIONS_TAB := "missions"
+const TEAMS_TAB := "teams"
 const UPGRADES_TAB := "upgrades"
 const STARTER_ROLE_ORDER := ["vanguard", "striker", "tech", "support", "mystic"]
 const TICK_SECONDS := 1.0
@@ -29,13 +30,14 @@ var _settled_seconds: float = 0.0
 var _events_log: Array[String] = []
 var _task_board: TaskBoard
 var _roster: RosterScreen
+var _teams: TeamScreen
 var _prestige_screen: PrestigeScreen
 var _auto_task_id: String = ""
 var _tick_count: int = 0
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	UILayout.fill(self)
 	var loaded := GamePackLoader.load_pack(PACK_ID)
 	var errors: Array = loaded.get("errors", [])
 	if not errors.is_empty():
@@ -121,6 +123,7 @@ func _on_tick() -> void:
 func _on_tab_selected(tab_id: String) -> void:
 	_task_board = null
 	_roster = null
+	_teams = null
 	_prestige_screen = null
 	if tab_id == HOME_TAB:
 		_shell.set_content(_build_hq_content())
@@ -131,6 +134,13 @@ func _on_tab_selected(tab_id: String) -> void:
 		_task_board.deploy_requested.connect(_on_deploy_requested)
 		_task_board.refresh(_pack, _state, _clock.now_utc())
 		_shell.set_content(_task_board)
+		return
+	if tab_id == TEAMS_TAB:
+		_teams = TeamScreen.new()
+		_teams.name = "TeamScreen"
+		_teams.deploy_requested.connect(_on_deploy_requested)
+		_teams.refresh(_pack, _state)
+		_shell.set_content(_teams)
 		return
 	if tab_id == HEROES_TAB:
 		_roster = RosterScreen.new()
@@ -448,7 +458,7 @@ func _log(line: String) -> void:
 
 func _build_error_view(errors: Array) -> void:
 	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UILayout.fill(margin)
 	margin.add_theme_constant_override("margin_left", 16)
 	margin.add_theme_constant_override("margin_right", 16)
 	margin.add_theme_constant_override("margin_top", 16)

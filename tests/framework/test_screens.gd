@@ -99,3 +99,48 @@ func test_roster_emits_training_requests() -> void:
 	assert_eq(received.size(), 1, "pressing train emits one request")
 	assert_eq(str(received[0]), "hero_volt", "the request names the agent")
 	roster.free()
+
+
+func test_team_screen_lists_only_squad_operations() -> void:
+	var pack := _pack()
+	var state := Simulation.new_state(pack, 1, 1000)
+	var screen := TeamScreen.new()
+	screen.refresh(pack, state)
+	var expected := 0
+	for task_id in pack.task_ids():
+		if int(pack.task(task_id).get("required_agent_count", 1)) > 1:
+			expected += 1
+	assert_true(expected > 0, "this pack declares squad operations")
+	assert_eq(screen.squad_row_count(), expected, "one row per squad operation")
+	screen.free()
+
+
+func test_team_screen_previews_and_deploys_a_valid_squad() -> void:
+	var pack := _pack()
+	var state := Simulation.new_state(pack, 1, 1000)
+	var screen := TeamScreen.new()
+	screen.refresh(pack, state)
+	assert_true(screen.deploy_button("s_raid").disabled, "a lone starter cannot field a squad")
+
+	# Two strong specialists satisfy Joint Raid's striker + support requirement.
+	var attributes: Dictionary = {}
+	for attribute in Recruitment.attribute_names(pack):
+		attributes[str(attribute)] = 40
+	for role_id in ["striker", "support"]:
+		var agent_id := "test_%s" % role_id
+		state.agents[agent_id] = {
+			"id": agent_id,
+			"role_id": role_id,
+			"level": 1,
+			"xp": 0,
+			"activity": "available",
+			"attributes": attributes.duplicate(true),
+		}
+	screen.refresh(pack, state)
+	assert_false(screen.deploy_button("s_raid").disabled, "a valid squad enables the deploy button")
+	var received: Array = []
+	screen.deploy_requested.connect(func(task_id: String) -> void: received.append(task_id))
+	screen.deploy_button("s_raid").emit_signal("pressed")
+	assert_eq(received.size(), 1, "pressing deploy emits one request")
+	assert_eq(str(received[0]), "s_raid", "the request names the squad operation")
+	screen.free()
