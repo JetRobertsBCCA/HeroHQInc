@@ -3,6 +3,68 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.16 — HQ first-viewport hierarchy (2026-11-05)
+
+Status: development verification complete with 360×640 windowed captures; no
+formal reviewer playtest or new Android device pass was started.
+
+### What was wrong
+
+At 360×640 the HQ column ordered Next objective → Command progress → Operations
+Network. The first screen was mostly guidance: the network started at y=393 on
+a fresh save, and at y=418 with one live job its first progress row ended at
+y=628. With two live jobs the first row ended at y=561, one pixel past the
+content edge at y=560. The live agency state was below the fold at the moment it
+mattered most.
+
+### What changed
+
+- The Operations Network now leads the HQ column directly under the header. The
+  next objective and compact Command progress follow below it.
+- The objective is a compact strip: the heading and Step share a row, and the
+  13px objective is capped at two lines.
+- Command progress keeps its milestone and requirement rows, but the heading and
+  next milestone share a row and the rows use 12px text with tighter spacing.
+  The max-level card keeps its unlock and later-milestone copy.
+- The network keeps its grid, HQ node, numbered satellites, links, travelling
+  tokens, completion pulse, row text and 44px motion toggle. Its map band shrank
+  from 108 to 82px, rows from 62 to 56px, and padding/gaps tightened. No new
+  animation was added.
+- No simulation, rewards, tabs or touch semantics changed.
+
+### Viewport evidence
+
+The content slot ends at y=560 in every capture; coordinates below are global.
+
+| State | Before network / row | After first / second row | Objective bottom | Command bottom |
+|---|---:|---:|---:|---:|
+| Fresh | 393 / — | — / — | 421 | 518 |
+| Active solo | 418 / 628 (cut) | 336 / — | 442 | 539 |
+| Active squad | 351 / 561 (cut) | 336 / 392 | 469 | 553 |
+| Reduced motion | 351 / 561 (cut) | 336 / 392 | 469 | 553 |
+
+All four required states keep the next objective and complete Command card above
+the fold. Every active state keeps its first live row; the two-row squad case
+also keeps its second row (network bottom 400) visible. The 44px motion toggle
+and 48px tab buttons retain their touch heights. Reduced motion was restored from the saved
+preference and reported `reduced=true` with the animation timer stopped.
+
+The completion capture still names the finished job and its reward in the
+network header (`Alley Patrol COMPLETE  +18 Credits`) while the empty map shows
+“No active operations / Deploy from Missions.” No extra motion was added.
+
+Captures are written to `ui_shots/` by the reproducible
+`tooling/hq_viewport_capture.gd` harness; that directory stays gitignored.
+
+### Checks
+
+- Godot headless suite: **136/136 passed**, including the new hierarchy check
+  proving the live network leads the objective and Command column.
+- Box geometry from the capture harness: all `objective_fits=true` and
+  `command_fits=true`; both active rows fit in the squad state.
+- `tooling/validate_packs.gd`: `OK hero_hq`, 1 pack checked, 0 invalid.
+- No formal reviewer playtest or new Android device pass was started.
+
 ## M1.15 — City role choices and the first squad (2026-11-05)
 
 Status: development verification complete headlessly; no formal reviewer

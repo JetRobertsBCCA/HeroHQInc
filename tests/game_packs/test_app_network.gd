@@ -182,6 +182,36 @@ func test_reduced_motion_is_restored_toggled_and_saved() -> void:
 	_cleanup(app)
 
 
+func test_hq_shows_live_network_before_compact_guidance() -> void:
+	var pack := _pack()
+	var state := _crew_state(pack)
+	Simulation.assign_task(state, pack, "s_alley", ["hero_volt"], NOW)
+	var app := _boot(state)
+	assert_true(app != null, "the app boots for the HQ hierarchy case")
+	if app == null:
+		return
+	var network: HeroNetworkPanel = app.get("_network_panel")
+	var objective: Control = app.get("_objective_card")
+	var command: Control = app.get("_command_card")
+	assert_true(network != null, "the live network is built")
+	assert_true(objective != null, "the compact objective strip is built")
+	assert_true(command != null, "the compact Command card is built")
+	if network != null and objective != null and command != null:
+		var network_card := network.get_parent().get_parent() as Control
+		assert_true(network_card != null, "the live network has a card wrapper")
+		if network_card != null:
+			assert_eq(network_card.get_index(), 0, "the live operation network leads the HQ column")
+			assert_eq(objective.get_index(), 1, "the next objective follows the network")
+			assert_eq(command.get_index(), 2, "Command progress follows the objective")
+			assert_true(
+				objective.get_parent() == network_card.get_parent(),
+				"both summaries stay under the network in the same scroll column",
+			)
+		assert_eq(objective.name, "ObjectiveCard", "the objective is addressable for layout checks")
+		assert_eq(network.activity_count(), 1, "the lead card is showing the live work")
+	_cleanup(app)
+
+
 func test_idle_network_reports_ready_heroes_without_activity() -> void:
 	var pack := _pack()
 	var state := Simulation.new_state(pack, 13, NOW)

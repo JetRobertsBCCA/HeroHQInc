@@ -33,6 +33,7 @@ var _timer: Timer
 var _settled_seconds: float = 0.0
 var _events_log: Array[String] = []
 var _task_board: TaskBoard
+var _objective_card: Control
 var _command_card: CommandProgressCard
 var _roster: RosterScreen
 var _teams: TeamScreen
@@ -146,6 +147,7 @@ func _on_tick() -> void:
 
 func _on_tab_selected(tab_id: String) -> void:
 	_task_board = null
+	_objective_card = null
 	_command_card = null
 	_roster = null
 	_teams = null
@@ -403,15 +405,16 @@ func _build_hq_content() -> Control:
 
 	var column := VBoxContainer.new()
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	column.add_theme_constant_override("separation", 10)
+	column.add_theme_constant_override("separation", 8)
 	scroll.add_child(column)
 
-	column.add_child(_build_objective_card())
+	column.add_child(_build_network_card())
+	_objective_card = _build_objective_card()
+	column.add_child(_objective_card)
 	_command_card = CommandProgressCard.new()
 	_command_card.name = "CommandProgressCard"
 	_command_card.refresh(_pack, _state)
 	column.add_child(_command_card)
-	column.add_child(_build_network_card())
 	if HeroFocus.enabled(_pack):
 		_focus_card = HeroFocusCard.new()
 		_focus_card.name = "FocusCard"
@@ -490,21 +493,21 @@ func _next_objective() -> Dictionary:
 func _build_objective_card() -> Control:
 	var objective := _next_objective()
 	var panel := PanelContainer.new()
+	panel.name = "ObjectiveCard"
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 4)
+	column.add_theme_constant_override("separation", 2)
 	panel.add_child(column)
+
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 8)
+	column.add_child(top)
 
 	var heading := Label.new()
 	heading.text = _pack.label("ui.objective_title", "Next objective")
+	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	heading.add_theme_font_size_override("font_size", 12)
 	heading.add_theme_color_override("font_color", ThemeTokens.color(_pack, "muted"))
-	column.add_child(heading)
-
-	var text := Label.new()
-	text.text = str(objective.get("text", ""))
-	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	text.add_theme_color_override("font_color", ThemeTokens.color(_pack, "accent"))
-	column.add_child(text)
+	top.add_child(heading)
 
 	var progress := Label.new()
 	if bool(objective.get("done", false)):
@@ -513,9 +516,18 @@ func _build_objective_card() -> Control:
 		progress.text = "%s %d / 5" % [
 			_pack.label("ui.objective_step", "Step"), int(objective.get("step", 1)),
 		]
+	progress.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	progress.add_theme_font_size_override("font_size", 11)
 	progress.add_theme_color_override("font_color", ThemeTokens.color(_pack, "muted"))
-	column.add_child(progress)
+	top.add_child(progress)
+
+	var text := Label.new()
+	text.text = str(objective.get("text", ""))
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text.max_lines_visible = 2
+	text.add_theme_font_size_override("font_size", 13)
+	text.add_theme_color_override("font_color", ThemeTokens.color(_pack, "accent"))
+	column.add_child(text)
 	return panel
 
 

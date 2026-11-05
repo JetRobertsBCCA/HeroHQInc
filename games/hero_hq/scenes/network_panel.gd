@@ -15,17 +15,17 @@ extends Control
 const MAX_ACTIVE_NODES := 3
 const MIN_HEIGHT := 190.0
 const PAD := 10.0
-const PAD_TOP := 10.0
+const PAD_TOP := 8.0
 const HEADER_HEIGHT := 22.0
-const DIAGRAM_HEIGHT := 108.0
-const GAP_BEFORE_ROWS := 8.0
-const ROW_HEIGHT := 62.0
+const DIAGRAM_HEIGHT := 82.0
+const GAP_BEFORE_ROWS := 6.0
+const ROW_HEIGHT := 56.0
 const ROW_TITLE_TOP := 2.0
-const ROW_META_TOP := 24.0
-const ROW_BAR_TOP := 50.0
+const ROW_META_TOP := 22.0
+const ROW_BAR_TOP := 48.0
 const ROW_BAR_HEIGHT := 4.0
 const MORE_HEIGHT := 20.0
-const PAD_BOTTOM := 10.0
+const PAD_BOTTOM := 8.0
 const HEADER_FONT_SIZE := 14
 const ROW_TITLE_FONT_SIZE := 15
 const ROW_TIME_FONT_SIZE := 15
@@ -280,8 +280,8 @@ func _draw_grid(top: float) -> void:
 
 
 func _draw_map(center: Vector2) -> void:
-	var radius := Vector2(minf(size.x * 0.25, 78.0), 33.0)
-	var idle_radius := Vector2(minf(size.x * 0.35, 108.0), 42.0)
+	var radius := Vector2(minf(size.x * 0.25, 78.0), 24.0)
+	var idle_radius := Vector2(minf(size.x * 0.35, 108.0), 30.0)
 	_draw_idle_nodes(center, idle_radius)
 	# The center node sits below the active lines so every spoke reads as
 	# connected to HQ rather than passing underneath it.
@@ -331,7 +331,7 @@ func _draw_active_link(center: Vector2, radius: Vector2, index: int) -> void:
 		)
 	_draw_satellite(point, color, squad)
 	_draw_travelling_tokens(center, point, color, int(activity.get("agent_count", 1)), index)
-	_draw_centered(str(index + 1), Vector2(point.x, point.y - 22.0), MAP_LABEL_FONT_SIZE, color)
+	_draw_centered(str(index + 1), Vector2(point.x, point.y - 16.0), MAP_LABEL_FONT_SIZE, color)
 
 
 func _draw_satellite(point: Vector2, color: Color, squad: bool) -> void:

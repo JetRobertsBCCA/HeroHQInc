@@ -6,8 +6,8 @@ extends PanelContainer
 ## level, so it stays correct for fresh profiles and for saves written before
 ## milestones existed.
 
-const FONT_SIZE := 14
-const HEADING_SIZE := 15
+const FONT_SIZE := 12
+const HEADING_SIZE := 14
 
 var _pack: GamePack
 var _state: GameState
@@ -88,25 +88,30 @@ func _ensure_built() -> void:
 		return
 	UILayout.fill(self)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 4)
+	column.add_theme_constant_override("separation", 2)
 	add_child(column)
+
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 8)
+	column.add_child(top)
 
 	_heading = Label.new()
 	_heading.name = "CommandLevel"
-	_heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_heading.add_theme_font_size_override("font_size", HEADING_SIZE)
-	column.add_child(_heading)
+	top.add_child(_heading)
 
 	_next = Label.new()
 	_next.name = "NextMilestone"
+	_next.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_next.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_next.add_theme_font_size_override("font_size", FONT_SIZE)
 	_next.add_theme_color_override("font_color", ThemeTokens.color(_pack, "muted"))
 	_next.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(_next)
+	top.add_child(_next)
 
 	_requirements = VBoxContainer.new()
 	_requirements.name = "Requirements"
-	_requirements.add_theme_constant_override("separation", 3)
+	_requirements.add_theme_constant_override("separation", 0)
 	column.add_child(_requirements)
 
 	_unlock = Label.new()

@@ -41,6 +41,9 @@ godot --path . --resolution 360x640 -s res://tooling/ui_capture.gd
 
 # capture the network working / reduced-motion / completed / idle states
 godot --path . --resolution 360x640 -s res://tooling/network_capture.gd
+
+# capture HQ fresh / active-solo / active-squad / reduced-motion first viewports
+godot --path . --resolution 360x640 -s res://tooling/hq_viewport_capture.gd
 ```
 
 Downloads for the pinned engine: <https://godotengine.org/download/linux/>.
