@@ -33,6 +33,10 @@ var prestige: Dictionary = {}
 ## Permanent research: {resource_id, branches: [{id, label_key, max_rank,
 ## base_cost, cost_growth, effect, per_rank}]}. Empty means no research.
 var research: Dictionary = {}
+## Focus: {max, regen_seconds, pulse_fraction, solo_cap_seconds,
+## squad_cap_seconds, pulse_interval_seconds, minimum_remaining_seconds}.
+## Empty means the pack does not use Focus.
+var focus: Dictionary = {}
 ## Recruit pool: {resource_id, named_count, base_cost, cost_growth, given_names,
 ## call_signs, filler_name_format, tiers: [...]}. Empty means no recruitment.
 var recruit_pool: Dictionary = {}

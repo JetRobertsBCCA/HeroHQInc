@@ -57,6 +57,16 @@ const SUPPORTED_REQUIREMENT_TYPES: Array[String] = [
 	"buy_upgrade",
 ]
 
+const FOCUS_NUMERIC_KEYS: Array[String] = [
+	"max",
+	"regen_seconds",
+	"pulse_fraction",
+	"solo_cap_seconds",
+	"squad_cap_seconds",
+	"pulse_interval_seconds",
+	"minimum_remaining_seconds",
+]
+
 const ID_PATTERN := "^[a-z][a-z0-9_]*$"
 const HEX_COLOR_PATTERN := "^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
 
@@ -140,16 +150,21 @@ static func _check_manifest_fields(root: String, manifest: Dictionary, manifest_
 			errors.append(error("invalid_value", manifest_path, "max_offline_seconds must be finite and > 0."))
 
 	var mechanics: Variant = manifest.get("mechanics", [])
+	var focus_declared := false
 	if not (mechanics is Array):
 		errors.append(error("invalid_value", manifest_path, "mechanics must be an array."))
 	else:
 		for mechanic in mechanics:
+			if str(mechanic) == "focus":
+				focus_declared = true
 			if not SUPPORTED_MECHANICS.has(str(mechanic)):
 				errors.append(error(
 					"unsupported_mechanic",
 					manifest_path,
 					"Mechanic '%s' is not implemented by this framework version." % str(mechanic),
 				))
+	if focus_declared or manifest.has("focus"):
+		errors.append_array(_check_focus(manifest, manifest_path))
 
 	var resources: Variant = manifest.get("resources", [])
 	if not (resources is Array) or (resources as Array).is_empty():
@@ -222,6 +237,38 @@ static func _check_manifest_fields(root: String, manifest: Dictionary, manifest_
 				seen_tabs[tab_id] = true
 				if str(tab.get("label_key", "")).is_empty():
 					errors.append(error("invalid_value", manifest_path, "Navigation '%s' has no label_key." % tab_id))
+	return errors
+
+
+static func _check_focus(manifest: Dictionary, path: String) -> Array[Dictionary]:
+	var errors: Array[Dictionary] = []
+	var raw: Variant = manifest.get("focus", null)
+	if raw == null:
+		errors.append(error(
+			"missing_required_key",
+			path,
+			"mechanics declares focus but manifest has no focus tuning.",
+		))
+		return errors
+	if not (raw is Dictionary):
+		errors.append(error("invalid_value", path, "focus must be an object."))
+		return errors
+	var focus: Dictionary = raw
+	for key in FOCUS_NUMERIC_KEYS:
+		if not focus.has(key):
+			errors.append(error(
+				"missing_required_key", path, "focus is missing '%s'." % key,
+			))
+			continue
+		var value := float(focus[key])
+		if not is_finite(value) or value <= 0.0:
+			errors.append(error(
+				"invalid_value", path, "focus.%s must be finite and > 0." % key,
+			))
+	if focus.has("pulse_fraction"):
+		var fraction := float(focus["pulse_fraction"])
+		if is_finite(fraction) and fraction > 1.0:
+			errors.append(error("invalid_value", path, "focus.pulse_fraction must be <= 1.0."))
 	return errors
 
 

@@ -256,6 +256,39 @@ func test_task_xp_must_be_non_negative() -> void:
 	_remove_fixture("fixture_task_xp")
 
 
+func test_focus_requires_complete_positive_tuning() -> void:
+	var files := _base_files("fixture_focus")
+	var manifest: Dictionary = files["manifest.json"]
+	manifest["mechanics"] = ["agents", "training", "focus"]
+	var root := _write_fixture("fixture_focus", files)
+	assert_has_error_code(
+		PackValidator.validate_pack_root(root),
+		"missing_required_key",
+		"declaring Focus without tuning is rejected"
+	)
+
+	manifest["focus"] = {
+		"max": 5,
+		"regen_seconds": 60,
+		"pulse_fraction": 0.15,
+		"solo_cap_seconds": 30,
+		"squad_cap_seconds": 90,
+		"pulse_interval_seconds": 10,
+		"minimum_remaining_seconds": 1,
+	}
+	root = _write_fixture("fixture_focus", files)
+	assert_eq(PackValidator.validate_pack_root(root), [], "complete Focus tuning validates")
+
+	(manifest["focus"] as Dictionary)["pulse_fraction"] = 1.5
+	root = _write_fixture("fixture_focus", files)
+	assert_has_error_code(
+		PackValidator.validate_pack_root(root),
+		"invalid_value",
+		"a Focus pulse above the full remaining time is rejected"
+	)
+	_remove_fixture("fixture_focus")
+
+
 func test_loader_builds_a_usable_pack_from_a_valid_fixture() -> void:
 	var root := _write_fixture("fixture_loader_good", _base_files("fixture_loader_good"))
 	var loaded := GamePackLoader.load_pack_from_root(root)

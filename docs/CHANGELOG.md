@@ -3,6 +3,179 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.13 — Live operations network (2026-11-05)
+
+Status: complete headlessly and in 360×640 windowed captures; no new Android
+device pass.
+
+### What was wrong
+
+The HQ network was a static roster diagram: every agent became an evenly spaced
+satellite whether idle, solo or in a squad. It showed no live assignment, no
+progress, no completion, no reduced-motion control, and it did not redraw as a
+job advanced. Section 11.3 asks for the opposite: a central operation display
+with hero/team activity, readable state, subtle mission motion and an efficient
+reduced-motion path.
+
+### What changed
+
+- `HeroNetworkPanel` now maps only running assignments onto numbered satellites:
+  a diamond for solo work, a three-dot cluster for a squad, a progress arc around
+  each node, crew tokens travelling from HQ, and hollow outer dots for idle
+  heroes. The central HQ node and grid stay flat and palette-driven.
+- Each operation also gets a compact text row: number, name, solo/squad and crew,
+  time left, percent complete and a progress bar. The header reports `N LIVE` /
+  `N READY`, or `STANDBY` when idle. Colour is supplemental; the labels, shapes,
+  counts and percentages carry the state without it.
+- Owner readability review at native 360×640: the two active rows now reserve
+  62 px each, with a 15 px operation/time line and a 14 px crew/percent/status
+  line. The map header, card title and reduced-motion control are 14 px; the
+  full-width bar is 4 px. The idle message is split into two 14 px lines so it
+  cannot clip. The two-row panel is 282 px high inside the existing HQ touch
+  scroller, and the bottom tab bar remains fixed.
+- `app.gd` feeds the panel a small snapshot (`activities`, `idle_count`,
+  `completion`) rather than giving the view mutable state. A normal tick updates
+  the panel in place, so no scene nodes are rebuilt for progress.
+- A completed task arms a 2.4-second completion feed with the operation name and
+  paid reward. The map header changes to a check plus `… COMPLETE` and the reward,
+  while one restrained success ring expands once around HQ. This survives the HQ
+  rebuild that follows settlement.
+- Verification caught a completion-only gap: after the last operation left the
+  map, the pulse had no active work to keep the redraw timer alive. The motion
+  gate now also honors the 2.4-second completion feed, with an App-level
+  regression assertion.
+- The network card adds a 44 px flat `Reduce motion: off/on` toggle. The choice is
+  saved under `extensions["hero_hq.ui"]`, restored on boot, and stops the 5 Hz
+  animation timer. Reduced mode draws static tokens and a static completion ring;
+  the one-second app tick still updates progress text.
+- The draw path is deliberately bounded: no shaders, no per-frame scene churn,
+  about twenty grid lines, at most three numbered map nodes plus `+N more`, and
+  at most eight idle dots (the header keeps the real count). The timer runs only
+  while the panel is visible, has active work or a completion pulse, and the
+  preference is full motion.
+- `tooling/network_capture.gd` reproduces working, reduced-motion, completion and
+  idle frames at 360×640 from a throwaway profile and manual clock.
+- Locale adds network status, idle, overflow, motion and solo copy.
+
+### Checks
+
+- Godot headless suite: **125/125 passed** (four new App-level network cases).
+  They cover solo + squad feed data, progress advancing with the deadline, the
+  completion/reward feed and one normal payout, the reduced-motion round trip,
+  and the idle ready count.
+- `tooling/validate_packs.gd`: `OK hero_hq`, 1 pack checked, 0 invalid.
+- Windowed 360×640 capture: `motion_running=true`; two frames 0.35 s apart
+  changed 61 sampled pixels; `Reduce motion: on` set `timer_running=false`;
+  completion showed `Alley Patrol COMPLETE` and `+18 Credits`; idle showed
+  `STANDBY` and `4 READY`.
+- Re-captured after the readability pass: working shows `2 LIVE` / `1 READY`,
+  `01 Alley Patrol` at `0:06` / `70%`, and `02 Joint Raid` at `1:00` / `50%`;
+  idle shows the two-line 14 px message; reduced-motion shows the 14 px toggle
+  with `timer_running=false`; completion still fits its 14 px header. All
+  captures are 360×640, the two rows have no clipping or overlap, and the
+  bottom tab bar is visible.
+- Direct before/after pair uses the same 7-agent, one-Alley-Patrol state:
+  `ui_shots/network_before.png` and `ui_shots/network_after_single.png`.
+  The controlled two-operation pair is `ui_shots/network_after_working.png`.
+- `tooling/playthrough_demo.gd`: **PASS in-game playthrough**.
+- `git diff --check`: clean.
+
+### Known limitations
+
+- The visual slice is verified in a 360×640 desktop window, not on a phone or
+  emulator. Its layout at other aspect ratios and touch feel remain unverified.
+- Abstract draw-only tokens are intentional: the codex excludes character
+  animation, and no image assets were added.
+- The map shows three active operations; overflow is counted in a `+N more`
+  line. The completion header shows the latest completion, while every event
+  still appears in Recent operations.
+- Reduced motion affects this network only. There is no global accessibility
+  settings screen yet, and no text-size setting.
+- The map's numbered badges and `HQ` mark are 10 px decorative labels; the
+  readable rows repeat the operation numbers and all operation/status text is
+  14–15 px.
+
+## M1.12 — Focus and v1.2 gameplay audit (2026-11-04)
+
+Status: complete headlessly; no new Android device pass.
+
+### What was wrong
+
+The codex makes Focus a signature active-acceleration mechanic, and the pack
+already declared it, but nothing loaded, validated, simulated, rendered or tested
+it. The v1.2 codex was also supplied out of tree, so the repository could not
+serve as its own product-context source of truth.
+
+### What changed
+
+- `HERO_HQ_MASTER_CODEX.md` is now at the repository root: v1.2, 101,715 bytes,
+  SHA-256 `69ce6d284ae66d8ad14a428847a4064d1c9e51e43dc773373418a24e85533077`.
+- `HeroFocus` (`games/hero_hq/rules/focus.gd`) owns the bank under
+  `extensions["hero_hq.focus"]`: 5/5 start, +1 per 60 real seconds including while
+  closed, backwards-clock safety, and 15% of current remaining time per pulse.
+  Solo pulses cap at 30 seconds, squad pulses at 90, each assignment has a
+  10-second cooldown, and a pulse never leaves less than one second on the clock.
+  The bank, timestamps, shortened deadline and cooldown all survive a save.
+- `HeroFocusCard` adds the HQ control. It shows the bank and next regeneration,
+  one button per running assignment, the exact projected saving before spending,
+  and a disabled reason for cooldown, empty bank, finished operation or too little
+  time. The composition root settles Focus at launch and each tick, applies only
+  successful pulses, saves, and logs the result.
+- The pack contract now loads and validates `focus` tuning. A malformed pack
+  fails validation instead of silently disabling the mechanic.
+- Added five Focus rule cases, an App-level projection/tap/persistence case, the
+  pack assertions and a negative pack-validation case. Also added a concurrent
+  two-operation settlement/reload case, so independent jobs settle exactly once
+  even when one completes before a save and the other after it.
+- Locale copy covers Focus status, pulse, cooldown, empty bank, unavailable and
+  refusal reasons.
+
+### Gameplay audit against v1.2
+
+Implemented and covered: the core deploy/settle/earn/train/recruit/research/
+rebirth loop; atomic saves and offline settlement capped at 8 hours; manual squad
+lineups; role-targeted recruitment; the current 15-operation ladder; Focus; and
+the single-rank repeat-last-operation automation.
+
+Deliberate newer-owner differences from the codex, preserved rather than
+silently reverted: 15 operations instead of 10 solo + 8 team; 2–3-hero squads
+instead of fixed three-hero teams; instant paid training instead of 1 XP/second
+timed training; and the existing Command Rebirth prestige layer instead of
+reserving Legacy Data. Focus's training pulse is inapplicable while training is
+instant.
+
+Remaining gameplay gaps, highest priority first:
+
+1. Command Level milestones are data-only; no requirements are evaluated and no
+   sector/team/automation unlocks are applied.
+2. Team depth: no named team slots, composition synergies or category mastery.
+3. Automation is one remembered last operation, not configured Auto Patrol /
+   team autopilot rules with slots and visible wait reasons.
+4. No offline earnings report; absence settlement happens but the player only sees
+   the existing settlement status line and event log.
+5. Content depth: traits, specializations, legendaries, contracts, first-clear
+   rewards and the codex's 22-upgrade catalogue are absent.
+6. Mission strategies (Fast Response / Careful Approach), speed-based duration
+   and class/skill reward modifiers are absent.
+7. Recruitment uses direct role-targeted hires rather than two revealed candidate
+   offers; the current flow is intentional in the build but is a codex difference.
+
+### Checks
+
+- Godot headless suite: **121/121 passed**.
+- `tooling/validate_packs.gd`: `OK hero_hq`, 1 pack checked, 0 invalid.
+- `tooling/playthrough_demo.gd`: **PASS in-game playthrough**.
+- `git diff --check`: clean.
+
+### Known limitations
+
+- The Focus card has no Android emulator or physical-phone pass yet. The last
+  device pass was M1.7 and predates Focus.
+- Focus is HQ-only; Missions and Teams do not duplicate the pulse controls.
+- The codex audit excludes store, ads/billing and physical-phone release work.
+- A fresh checkout may need `godot --headless --editor --path . --quit` before
+  tests so the global class cache registers newly added `class_name` scripts.
+
 ## M1.11 — Retry a paused auto-repeat (2026-11-04)
 
 Status: complete; headless and Android 35 emulator verified, with the successful

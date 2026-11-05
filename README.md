@@ -6,7 +6,7 @@ coordinated citywide agency while the player builds, trains and automates teams.
 
 - **Engine:** Godot **4.7.2** stable, GDScript, `gl_compatibility` renderer
 - **Target:** Android first, portrait, 360×640 logical canvas with safe-area insets
-- **Status:** **v1 loop complete** (M1.7) — fresh save to rebirth with manual squad lineups, played end to end; debug APK verified on an Android 35 emulator (see [docs/ANDROID.md](docs/ANDROID.md)); see [docs/CHANGELOG.md](docs/CHANGELOG.md)
+- **Status:** **v1 core loop complete** (M1.12) + **M1.13 Operations Network visual/readability pass** — fresh save to rebirth with manual squad lineups, Focus and offline settlement, played end to end; debug APK verified on an Android 35 emulator (see [docs/ANDROID.md](docs/ANDROID.md)). Focus and the live network are headless/capture-verified but neither has had a new device pass; remaining MVP gaps are listed below.
 - **Design source of truth:** `HERO_HQ_MASTER_CODEX.md` (see *Design document* below)
 
 ## Run it
@@ -38,6 +38,9 @@ godot --headless --path . -s res://tooling/playthrough_demo.gd
 
 # capture every tab to PNG at 360x640 (windowed, restores your save)
 godot --path . --resolution 360x640 -s res://tooling/ui_capture.gd
+
+# capture the network working / reduced-motion / completed / idle states
+godot --path . --resolution 360x640 -s res://tooling/network_capture.gd
 ```
 
 Downloads for the pinned engine: <https://godotengine.org/download/linux/>.
@@ -64,6 +67,8 @@ and Teams explains a blocked rule by slot, job, rating or role, offers Retry for
 an immediate recheck, and clears when the rule starts. Use
 `-gpu host`; the software renderer cannot link Godot's canvas shader and shows a
 black screen.
+The M1.12 Focus card and the M1.13 operations-network visuals have not yet
+been included in an emulator or phone pass.
 
 ## Play the loop
 
@@ -86,14 +91,24 @@ with 50 Credits, which is enough for one training session and no more.
    affordable hire is a Tech, instead of hoping the pool rolls one.
 4. A deployed operation moves to **Active operations** with a live countdown.
    When it reaches zero it pays out, the heroes are freed and the result is
-   logged on the HQ tab.
-5. **Teams** gives every squad operation one slot per required hero. Tapping a
+   logged on the HQ tab. HQ's **Operations Network** gives every running solo job
+   or squad a numbered map node, animated crew tokens, a progress arc and a
+   text row with time left and percent. A brief `COMPLETE` line and restrained
+   HQ pulse report the paid reward. The saved `Reduce motion: on` control stops
+   the five-hertz pulse and redraw loop while leaving the progress text live.
+   The two live rows use 15 px operation/time text and 14 px crew, percent and
+   status text; the map header and motion toggle are 14 px.
+5. **Focus** on HQ shows the 5/5 bank, the next regeneration and one pulse button
+   per running operation. Each button prints the exact projected saving before
+   spending — 15% of remaining time, capped at 30 seconds solo and 90 seconds
+   squad — and a 10-second per-operation cooldown blocks repeat taps.
+6. **Teams** gives every squad operation one slot per required hero. Tapping a
    slot opens an inline roster list; a hero already in another slot or currently
    deployed is shown disabled, so duplicates and activity locks cannot be
    chosen. `Save squad` stores the lineup (it survives reloads), `Clear` removes
    it, and `Deploy` still enforces roles and the rating gate with the exact
    reason on screen.
-6. Close the app mid-operation and reopen it later: the same settlement call
+7. Close the app mid-operation and reopen it later: the same settlement call
    finishes it on launch, capped at the pack's 8-hour allowance. If the
    automation rank is owned, the remembered operation is re-armed once after
    that settlement. Missions and Teams show its live state: `Waiting` while an
@@ -122,8 +137,8 @@ growing from ~15 minutes to ~1 hour, ×11.45 on payouts, and **no single wait ov
 14 minutes**. The formulas, the sweep behind them and the tuning knobs are in
 [docs/BALANCE.md](docs/BALANCE.md).
 
-Everything above is driven by pack data (`games/hero_hq/data/*.json`), not by
-code in `framework/`.
+The loop is driven by pack data (`games/hero_hq/data/*.json`), while HERO//HQ-specific
+rules such as Focus live in `games/hero_hq/`, not in `framework/`.
 
 ## Layout
 
@@ -141,9 +156,10 @@ framework/                 shared, game-neutral engine (never names a title)
 games/hero_hq/             HERO//HQ content pack — game #1
   manifest.json            5 tabs, credits/intel, 8h offline cap, data paths
   data/                    roles, starter agents + tuning, task ladder, progression
+  rules/focus.gd           HERO//HQ Focus rules and persisted state
   locale/en.json           every player-facing string
   ui/theme.json            palette as generic theme tokens
-  scenes/                  app composition root + operations-network drawing
+  scenes/                  app composition root + Focus card + operations-network drawing
 tests/                     headless runner, test_case harness, suites
 tooling/validate_packs.gd  CLI pack validator (CI gate)
 tooling/demo_loop.gd       headless walkthrough of the loop
@@ -151,6 +167,7 @@ tooling/balance_report.gd  greedy pacing simulation + curve report
 tooling/long_run_report.gd 7-day rebirth model + boredom-budget check
 tooling/playthrough_demo.gd  real-UI playthrough, fresh save to rebirth
 tooling/ui_capture.gd      windowed PNG capture of every tab
+tooling/network_capture.gd  controlled network state captures
 ```
 
 **Dependency direction:** `games/* -> framework/*`. The framework never imports a
@@ -173,9 +190,28 @@ against the gate, any missing role, and the exact blocking reason when it cannot
 deploy. A lineup can be saved per operation, updated after training, or cleared
 to return to auto-selection.
 
-Not implemented yet: the remaining automation and focus layers, monetization
-(M6), and physical-device Android testing. The debug build runs on an emulator;
-release signing, an app icon and a phone run remain.
+The HQ Focus card projects every pulse before the tap; its bank, spent points,
+deadlines and per-operation cooldowns survive a save round trip. HQ's Operations
+Network now mirrors live solo and squad assignments instead of drawing the
+roster: numbered satellites, moving crew tokens, mission progress at a glance,
+a brief completion/reward pulse, and a persistent reduced-motion toggle.
+Non-colour labels (`LIVE`, `READY`, `STANDBY`, `COMPLETE`), percentages and
+shapes keep idle, working and completed states distinct without the palette.
+
+Not implemented yet: command-level milestones and sector unlocks, configured
+Auto Patrol and team autopilot with their wait reasons, team mastery, synergies
+and named team slots, traits, specializations, legendaries, agency contracts, and
+an offline earnings report. Monetization (M6) and physical-device Android testing
+remain out of scope for this pass. The debug build runs on an emulator; release
+signing, an app icon and a phone run remain.
+
+The newer owner decisions intentionally override several codex launch numbers:
+the build keeps its **15-operation ladder** (12 solo, 3 squad), **2–3-hero
+squads**, **instant paid training** and the existing prestige layer, rather than
+the codex's 10 solo / 8 team missions, fixed three-hero teams, timed training and
+reserved Legacy Data. Those are deliberate product differences, not missing
+Focus work. The codex's Focus training pulse is also inapplicable while training
+is instant; mission pulses are implemented.
 
 ## Non-negotiable product rules
 
@@ -187,15 +223,20 @@ release signing, an app icon and a phone run remain.
 
 ## Design document
 
-The authoritative specification is `HERO_HQ_MASTER_CODEX.md`, which the spec says
-must live at the repository root. It is **not committed yet** — the copy supplied
-arrived as a chat attachment and was not available as a file in the workspace. Add
-it at the root (or `docs/`) so the single-document rule holds; nothing in the code
-depends on it.
+The authoritative specification lives at `HERO_HQ_MASTER_CODEX.md`
+(version 1.2, 101,715 bytes, SHA-256
+`69ce6d284ae66d8ad14a428847a4064d1c9e51e43dc773373418a24e85533077`). It is the
+single product-context document; source code, tests, game-pack JSON and this
+changelog remain development artifacts. Where the codex and a newer owner
+decision differ, the newer decision wins and the difference is recorded here and
+in [docs/CHANGELOG.md](docs/CHANGELOG.md).
 
 ## Setup for a fresh checkout
 
 ```bash
-godot --headless --path . --import   # build import caches once
+godot --headless --editor --path . --quit   # build editor/import caches once
 godot --headless --path . -s res://tests/run_tests.gd
 ```
+
+The first command also refreshes `.godot/global_script_class_cache.cfg`; without
+it, a fresh checkout can fail to resolve newly added `class_name` scripts.

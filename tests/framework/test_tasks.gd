@@ -185,3 +185,57 @@ func test_save_round_trip_preserves_running_assignments() -> void:
 		var resumed := Simulation.simulate_delta(restored, 20.0, pack)
 		assert_eq((resumed["events"] as Array).size(), 1, "the assignment still completes after a reload")
 	SaveService.delete_profile("test_m1_tasks")
+
+
+func test_two_operations_settle_independently_across_a_reload() -> void:
+	var pack := _pack()
+	var state := _state(pack, 5000)
+	state.game_id = "test_multi_ops"
+	# A second controlled hero lets two operations run at once; the real starter
+	# alone would force the test to wait for one job before starting another.
+	state.agents["test_second"] = {
+		"id": "test_second",
+		"name": "Test Second",
+		"role_id": "striker",
+		"level": 1,
+		"xp": 0,
+		"activity": "available",
+		"attributes": {"power": 8, "speed": 8, "skill": 8},
+	}
+
+	var first := Simulation.assign_task(state, pack, "s_alley", ["hero_volt"], 5000)
+	var second := Simulation.assign_task(state, pack, "s_breakin", ["test_second"], 5000)
+	assert_true(first.get("ok", false), "the first operation starts")
+	assert_true(second.get("ok", false), "the second operation starts concurrently")
+	assert_eq(state.assignments.size(), 2, "both operations are active")
+	assert_eq(state.resource("credits"), 50.0, "deployment does not pay or spend Credits")
+
+	var early := Simulation.simulate_delta(state, 20.0, pack)
+	assert_eq((early["events"] as Array).size(), 1, "only the 20 second operation finishes")
+	assert_eq(state.resource("credits"), 68.0, "the first payout lands once")
+	assert_eq(state.assignments.size(), 1, "the longer operation keeps running")
+	assert_eq(
+		str(state.agents["test_second"]["activity"]),
+		"assigned",
+		"the second hero stays locked to the longer operation",
+	)
+
+	SaveService.save_state(state)
+	var loaded := SaveService.load_state("test_multi_ops")
+	var restored: GameState = loaded.get("state", null)
+	assert_true(restored != null, "the two-operation state loads back")
+	if restored == null:
+		SaveService.delete_profile("test_multi_ops")
+		return
+	assert_eq(restored.assignments.size(), 1, "the unfinished operation survives the reload")
+	assert_eq(restored.last_settled_utc, 5020, "the settled instant survives the reload")
+	var finish := Simulation.simulate_delta(restored, 10.0, pack)
+	assert_eq((finish["events"] as Array).size(), 1, "the remaining operation finishes after reload")
+	assert_eq(restored.resource("credits"), 113.0, "both rewards are paid exactly once")
+	assert_eq(restored.tasks_completed(), 2, "both completions count")
+	assert_eq(restored.assignments.size(), 0, "no assignments remain")
+	assert_eq(str(restored.agents["test_second"]["activity"]), "available", "the second hero is freed")
+
+	Simulation.simulate_delta(restored, 1000.0, pack)
+	assert_eq(restored.resource("credits"), 113.0, "no completion pays twice")
+	SaveService.delete_profile("test_multi_ops")

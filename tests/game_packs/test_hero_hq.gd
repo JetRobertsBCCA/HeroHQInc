@@ -37,6 +37,8 @@ func test_pack_declares_the_locked_mvp_shell() -> void:
 	assert_true(pack.missions.has("s_siege"), "the highest-gated task exists")
 	assert_true(pack.missions.has("s_siegebreak"), "the squad finale exists")
 	assert_true(pack.starter_agents.has("hero_volt"), "the starter hero comes from pack data")
+	assert_eq(int(pack.focus.get("max", 0)), 5, "Focus capacity comes from pack data")
+	assert_eq(int(pack.focus.get("regen_seconds", 0)), 60, "Focus regeneration is pack data")
 	assert_eq(pack.max_offline_seconds, 28800.0, "the offline allowance is eight hours")
 	assert_eq(pack.label("roles.striker"), "Striker", "labels resolve through locale")
 	assert_eq(pack.label("missing.key"), "missing.key", "a missing label degrades to its key")

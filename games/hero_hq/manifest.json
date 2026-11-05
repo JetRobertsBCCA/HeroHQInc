@@ -60,6 +60,15 @@
 			}
 		]
 	},
+	"focus": {
+		"max": 5,
+		"regen_seconds": 60,
+		"pulse_fraction": 0.15,
+		"solo_cap_seconds": 30,
+		"squad_cap_seconds": 90,
+		"pulse_interval_seconds": 10,
+		"minimum_remaining_seconds": 1
+	},
 	"max_offline_seconds": 28800,
 	"roster_capacity": 240,
 	"navigation": [
