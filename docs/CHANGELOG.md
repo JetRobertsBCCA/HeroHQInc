@@ -69,7 +69,7 @@ playtest rather than changed in this slice.
 - 360×640 windowed captures: the HQ Command Level 1 card (next level 2), the HQ
   Command Level 2 card (next level 3 with the Tech/Support row), the locked Drone
   Swarm row in Missions and the locked Joint Raid row in Teams. All four
-  requirement rows, the wrapped Tech/Support label and the full `Citywide
+  requirement rows, the Tech/Support requirement label and the full `Citywide
   Defense requires Command Level 3 (current 2).` reason were legible; no clipped
   text or overlapping controls.
 - No formal reviewer playtest was started.

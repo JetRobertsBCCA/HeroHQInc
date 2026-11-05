@@ -93,6 +93,11 @@ func test_level_two_shows_the_next_milestone_and_city_requirements() -> void:
 		"the lifetime requirement is measured against the saved total",
 	)
 	assert_eq(
+		str(_row(rows, CommandProgression.TYPE_OWN_ROLE_ANY).get("label", "")),
+		"Own a Tech or Support hero",
+		"the role requirement separates the localized alternatives",
+	)
+	assert_eq(
 		CommandProgression.unlocked_stage_labels(pack, 3),
 		["Citywide Defense"],
 		"the HQ card can name the City unlock",

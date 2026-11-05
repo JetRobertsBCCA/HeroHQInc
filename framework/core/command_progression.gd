@@ -161,8 +161,8 @@ static func _requirement_row(
 			target = float(maxi(int(requirement.get("count", 1)), 1))
 			current = float(_count_roles(state, roles))
 			var names := _role_names(pack, roles)
-			var joiner := pack.label("ui.command_or", "or")
-			label = pack.label("ui.command_req_role_any", "Own a %s agent") % joiner.join(names)
+			var separator := " %s " % pack.label("ui.command_or", "or")
+			label = pack.label("ui.command_req_role_any", "Own a %s agent") % separator.join(names)
 		TYPE_BUY_UPGRADE:
 			target = float(maxi(int(requirement.get("count", 0)), 0))
 			current = float(_purchased_upgrades(state))
