@@ -114,7 +114,7 @@ func test_existing_level_three_save_restores_the_city_unlock() -> void:
 	if state == null or card == null:
 		_cleanup(app)
 		return
-	assert_eq(state.pack_content_version, 3, "the app stamping the new content version needs no migration")
+	assert_eq(state.pack_content_version, 4, "the app stamping the new content version needs no migration")
 	assert_eq(state.tasks_completed(), 12, "the existing lifetime counter is preserved")
 	assert_true(state.earned_total("credits") >= 1500.0, "existing lifetime earnings are preserved")
 	assert_eq(card.heading_text(), "Command Level 3", "the card derives the existing level")

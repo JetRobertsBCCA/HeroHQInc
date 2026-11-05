@@ -212,6 +212,12 @@ at 4:40 in-game, using 33 dispatches across Alley Patrol, Break-In Response and
 Stakeout; that route found no stall or repetition worth tuning, so the approved
 requirements and Street rewards are unchanged.
 
+City now has a role-shaped second tier: Convoy Ambush is the Support's
+high-rating solo, while Joint Raid is the better use of a Support and Striker
+together. A fresh-save model reaches City at 4:40, starts the first squad at
+5:55 and completes it at 7:35, and clears all eight City firsts by 10:35 without
+an idle stall. The 15-operation ladder and Street gate are unchanged.
+
 Not implemented yet: command milestones beyond City, National Response gating,
 configured Auto Patrol and team autopilot with their wait reasons, team mastery,
 synergies and named team slots, traits, specializations, legendaries, agency contracts, and

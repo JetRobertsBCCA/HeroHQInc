@@ -3,6 +3,81 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.15 — City role choices and the first squad (2026-11-05)
+
+Status: development verification complete headlessly; no formal reviewer
+playtest or new Android device pass was started.
+
+### What was wrong
+
+The first City slice had a universal repeat. Convoy Ambush paid 430 Credits and
+4 Intel in 90 seconds (4.78 Credits/s, 0.044 Intel/s) with no role gate. Joint
+Raid paid 560 and 5 in 120 seconds (4.67, 0.042) and occupied a Striker and a
+Support. A Support trained to 145 could therefore run Convoy alone for more of
+both rewards than the two-hero raid. The route confirmed the effect: City was
+reachable at 4:40 and the squad at 5:20, but Convoy was the Support's best
+assignment and the team had no economic reason to form.
+
+### What changed
+
+- Convoy Ambush now requires a Support hero, keeping its 140 rating, 90-second
+  duration and 430 Credits / 4 Intel payout. It is the Support's high-rating
+  solo rather than a universal 140-rated job.
+- Joint Raid keeps its two-hero, rating-130 Striker + Support gate. It now takes
+  100 seconds and pays 850 Credits / 8 Intel: 8.5 Credits/s and 0.08 Intel/s,
+  above the best Support-plus-Striker solo pair (Convoy + Rooftop at 7.94
+  Credits/s and 0.078 Intel/s).
+- Pack content version is 4. The Street gate, Command Level 3 unlock and the
+  15-operation ladder are unchanged; no operation was added or removed.
+- Vanguard/Hazmat remains the narrowest role window. The model's Vanguard
+  reaches 130 to clear it, where Rooftop already pays more, so Hazmat is a
+  first-clear target rather than a repeat. That observation is recorded for the
+  deferred playtest rather than changed here.
+
+### Route check
+
+A deterministic fresh-save model followed the M1.14 Street route to City at 4:40
+(37 dispatches, 1,549 lifetime Credits), then used ordinary targeted recruitment
+and paid training with no grants. It recruited the next Tech (rating 100, 328
+Credits) and Mystic (rating 95, 141 Credits) at City entry, trained the Support
+to 145, the starter Striker to 130, the Vanguard to 130, the Tech to 120 and the
+Mystic to 175, and bought the first payout and training research ranks when Intel
+allowed (7:35 and 9:35).
+
+| Operation | Reachable | First clear |
+|---|---:|---:|
+| Drone Swarm | 4:40 | 5:25 |
+| Signal Pursuit | 5:20 | 6:35 |
+| Hazmat Breach | 6:35 | 8:15 |
+| Rooftop Pursuit | 4:40 | 7:35 |
+| Medivac Escort | 4:40 | 9:05 |
+| Joint Raid | 5:20 | 7:35 |
+| Convoy Ambush | 5:20 | 10:35 |
+| Ward Collapse | 7:35 | 9:30 |
+
+“Reachable” means a legal composition existed, not that the hero was idle. The
+first squad was reachable at 5:20 but both roles were finishing earlier work, so
+it dispatched at 5:55 and completed at 7:35 (100 seconds; 51 total dispatches,
+14 after City entry). All eight City firsts completed at 10:35, with 71 total
+dispatches (34 after entry; 24 to City operations and 10 Street fallbacks).
+There was no idle stall. The longest gap between reaches was 1:15, from Signal
+Pursuit at 5:20 to Hazmat Breach at 6:35.
+
+The resulting choices are role-shaped. Convoy is the Support's best solo, but
+Raid is better when a Striker is free. Signal Pursuit is the Tech's best legal
+repeat (3.57 Credits/s), Ward Collapse the Mystic's (4.27), and Rooftop Pursuit
+the Striker's (3.17). Hazmat remains a bridge before Rooftop opens. No single
+operation is both the best solo for every role and the best use of the pair.
+
+### Checks
+
+- Godot headless suite: **135/135 passed** (two new city-content cases).
+- The new checks prove Convoy rejects a rating-eligible non-Support, Joint Raid
+  keeps its two-hero/rating-130 Striker + Support gate and is reachable at
+  125 + 145, and Raid's Credits/s and Intel/s both exceed Convoy + Rooftop.
+- `tooling/validate_packs.gd`: `OK hero_hq`, 1 pack checked, 0 invalid.
+- No formal reviewer playtest was started.
+
 ## M1.14 — Command Levels and the City unlock (2026-11-05)
 
 Status: complete headlessly and in 360×640 windowed captures; no formal reviewer

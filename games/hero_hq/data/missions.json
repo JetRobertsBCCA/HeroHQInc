@@ -109,11 +109,11 @@
 		"kind": "squad",
 		"stage_id": "city",
 		"category_id": "crime",
-		"base_seconds": 120,
+		"base_seconds": 100,
 		"required_agent_count": 2,
 		"minimum_rating": 130,
 		"required_role_ids": ["striker", "support"],
-		"rewards": {"credits": 560, "intel": 5},
+		"rewards": {"credits": 850, "intel": 8},
 		"xp": 26
 	},
 	{
@@ -125,7 +125,7 @@
 		"base_seconds": 90,
 		"required_agent_count": 1,
 		"minimum_rating": 140,
-		"required_role_ids": [],
+		"required_role_ids": ["support"],
 		"rewards": {"credits": 430, "intel": 4},
 		"xp": 24
 	},
