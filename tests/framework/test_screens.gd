@@ -53,6 +53,60 @@ func test_task_board_shows_running_operations() -> void:
 	board.free()
 
 
+func test_task_board_separates_ready_and_locked_operations() -> void:
+	var pack := _pack()
+	var state := Simulation.new_state(pack, 1, 1000)
+	var board := TaskBoard.new()
+	board.refresh(pack, state, 1000)
+	assert_eq(
+		board.ready_row_count() + board.locked_row_count(),
+		pack.missions.size(),
+		"every operation appears in exactly one board section",
+	)
+	assert_true(board.ready_row_count() > 0, "the starter has a ready operation")
+	assert_true(board.locked_row_count() > 0, "the higher ladder stays visibly locked")
+	assert_eq(
+		board.deploy_button("s_alley").text,
+		pack.label("ui.deploy", "Deploy"),
+		"a ready operation keeps its deploy action",
+	)
+	assert_eq(
+		board.deploy_button("s_rooftop").text,
+		pack.label("ui.locked", "Locked"),
+		"a locked operation shows a locked action instead",
+	)
+	assert_true(
+		board.task_status_text("s_rooftop").contains(pack.label("ui.rating", "Rating").to_upper()),
+		"the locked row states the rating gate",
+	)
+	board.free()
+
+
+func test_task_board_updates_active_progress_in_place() -> void:
+	var pack := _pack()
+	var state := Simulation.new_state(pack, 1, 1000)
+	var deployed := Simulation.assign_task(state, pack, "s_alley", ["hero_volt"], 1000)
+	var assignment_id := str(deployed["assignment_id"])
+	var board := TaskBoard.new()
+	board.refresh(pack, state, 1000)
+	assert_eq(board.active_progress(assignment_id), 0, "a fresh operation starts at zero percent")
+	assert_eq(
+		board.active_countdown(assignment_id),
+		"Time left 0:20",
+		"the active row starts with the full countdown",
+	)
+	board.tick(1010)
+	assert_eq(board.active_progress(assignment_id), 50, "the bar advances with the one-second tick")
+	assert_eq(
+		board.active_countdown(assignment_id),
+		"Time left 0:10",
+		"the countdown shares the same one-second tick",
+	)
+	board.tick(1020)
+	assert_eq(board.active_progress(assignment_id), 100, "the bar reaches full at the deadline")
+	board.free()
+
+
 func test_roster_shows_agents_and_training() -> void:
 	var pack := _pack()
 	var state := Simulation.new_state(pack, 1, 1000)

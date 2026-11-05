@@ -44,6 +44,9 @@ godot --path . --resolution 360x640 -s res://tooling/network_capture.gd
 
 # capture HQ fresh / active-solo / active-squad / reduced-motion first viewports
 godot --path . --resolution 360x640 -s res://tooling/hq_viewport_capture.gd
+
+# capture the Mission board in fresh, active and locked states at 360x640
+godot --path . --resolution 360x640 -s res://tooling/missions_viewport_capture.gd -- --tag=after
 ```
 
 Downloads for the pinned engine: <https://godotengine.org/download/linux/>.
@@ -82,19 +85,21 @@ with 50 Credits, which is enough for one training session and no more.
 1. **HQ** always names one concrete next step — deploy, train, recruit, research,
    rebirth — derived from the live save, so a new player is never left guessing.
    It re-arms itself after every Command Rebirth.
-2. **Missions** lists all fifteen operations: twelve solo jobs and three squad
-   jobs, gates from **60 to 185**, durations from 20 seconds to 4 minutes, and
-   payouts from 18 to 2,400 Credits plus Intel. Each card shows stage, category,
-   duration and gate, and `Deploy` is disabled with the blocking reason printed
-   on it (rating too low, no free hero, missing role).
+2. **Missions** is a compact operation board. Ready operations sit above locked
+   ones; every row carries a category glyph and accent, stage, duration, payout,
+   role gate and an explicit `RATING` versus `GATE` readiness line. `Deploy` is
+   disabled on locked rows, which say `LOCKED` and the bottleneck (rating, no
+   free hero or missing role). A running operation gets an in-place progress bar
+   that updates on the existing one-second tick, not a tween.
 3. **Heroes** shows rating, level, XP bar and `Train` (25 Credits for +40 XP,
    cost ×1.4 per level). The starter gains +20 rating per level, so early levels
    open new tiers quickly. Recruitment draws from 200 named slots, costs 50
    Credits with ×1.03 growth, and has a **role picker**: choose Tech and the next
    affordable hire is a Tech, instead of hoping the pool rolls one.
-4. A deployed operation moves to **Active operations** with a live countdown.
-   When it reaches zero it pays out, the heroes are freed and the result is
-   logged on the HQ tab. HQ's **Operations Network** gives every running solo job
+4. A deployed operation moves to **Live operations** with a countdown and an
+   in-place progress bar. When it reaches zero it pays out, the heroes are freed
+   and the result is logged on the HQ tab. HQ's **Operations Network** gives
+   every running solo job
    or squad a numbered map node, animated crew tokens, a progress arc and a
    text row with time left and percent. A brief `COMPLETE` line and restrained
    HQ pulse report the paid reward. The saved `Reduce motion: on` control stops
@@ -171,6 +176,7 @@ tooling/long_run_report.gd 7-day rebirth model + boredom-budget check
 tooling/playthrough_demo.gd  real-UI playthrough, fresh save to rebirth
 tooling/ui_capture.gd      windowed PNG capture of every tab
 tooling/network_capture.gd  controlled network state captures
+tooling/missions_viewport_capture.gd  strict Mission fresh/active/locked capture
 ```
 
 **Dependency direction:** `games/* -> framework/*`. The framework never imports a

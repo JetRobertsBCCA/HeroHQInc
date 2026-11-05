@@ -3,6 +3,74 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.17 — Mission operation board (2026-11-05)
+
+Status: complete; windowed 360×640 fresh/active/locked captures and headless checks.
+
+### What was wrong
+
+Missions was a long stack of nearly identical 140px panels. Active work was a
+thin strip above the list, ready and locked jobs were mixed together, and the
+role gate, Command Level gate and blocking reason were buried in an 11px detail
+line or at the bottom of a disabled card. On a portrait phone the next useful
+operation took several rows of reading to find.
+
+### What changed
+
+- `TaskBoard` now separates **Live operations**, **Ready now** and **Locked**
+  groups. The board header carries ready/locked counts, and each group is sorted
+  by its rating gate.
+- Every available row uses a compact 110px card: a category glyph and 4px accent
+  stripe, title and payout across the top, a stage/category/time/role-gate meta
+  line, and a readiness line with the current rating and required gate. Locked
+  rows keep a disabled `Locked` action; the 48px action sits in a footer beside
+  the reason instead of squeezing the title.
+- Category glyphs and palette tokens come from the order of
+  `progression.categories`, not from title ids, so the shared widget stays
+  game-neutral. The glyphs are simple printable symbols (`◆ + # * !`).
+- Running rows now show the assigned heroes, payout, countdown, a 6px progress
+  bar and a percentage derived from `started_utc`/`ends_utc`. `tick()` updates
+  the bar and countdown only, once per second. There is no tween or continuous
+  animation; the existing reduced-motion preference is untouched.
+- The rewrite retains the existing auto-repeat banner, its Retry signal and the
+  `blocked_reason` API. Stage-locked City operations still use
+  `CommandProgression.stage_lock_text`, so their Command Level explanation stays
+  visible on the board.
+- `tooling/missions_viewport_capture.gd` boots the real app at 360×640, backs up
+  and restores the save, captures fresh/active/locked states, and fails unless
+  the live row, progress bar, visible cards, disabled lock action and 48px touch
+  targets pass.
+- Two focused cases cover the ready/locked split and in-place progress with the
+  existing countdown. The total suite is now **138 tests**.
+
+### Evidence
+
+- Before: `ui_shots/missions_before_original.png` (the canonical old card stack).
+- After: `ui_shots/missions_after_fresh.png`, `ui_shots/missions_after_active.png`,
+  `ui_shots/missions_after_locked.png`; `ui_shots/missions.png` is the active
+  state.
+- Measured at 360×640: content slot **344×456**, available rows **110px**, live
+  row **106px**, action buttons **48px**. Fresh shows 1 ready and 14 locked;
+  active shows 3 ready and 12 locked with the live operation at **50% / 0:10**;
+  locked is scrolled to y=160 with the first blocked rows and reasons visible.
+- The locked capture includes City jobs whose two-line status names the Command
+  Level gate, confirming the merge kept the newer progression behavior.
+
+### Checks
+
+- **138/138** headless tests pass, including the existing auto-repeat and
+  blocked-reason coverage plus the two new Mission cases.
+- Validator `OK hero_hq`, 1 pack checked, 0 invalid.
+- Strict capture exits **0** with `MISSION_CAPTURE_OK`; all three images are
+  360×640, the ready card and live card are visible, and the live progress bar is
+  in flight.
+
+### Known limitations
+
+- The captures are windowed 360×640, not a new Android/emulator or physical
+  phone pass. No formal playtest was started.
+- No content, deploy, lock, reward or settlement rules changed.
+
 ## M1.16 — HQ first-viewport hierarchy (2026-11-05)
 
 Status: development verification complete with 360×640 windowed captures; no
