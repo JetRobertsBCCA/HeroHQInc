@@ -1,8 +1,10 @@
 extends SceneTree
-## Captures the Missions board at 360x640 in four states and checks the parts
+## Captures the Missions board at 360x640 in six states and checks the parts
 ## that must survive a compact portrait layout:
 ##   fresh   - no live work, the first ready operation and the locked ladder
 ##   active  - a running operation with a live progress bar and countdown
+##   patrol  - the Auto Patrol card driving a live solo operation
+##   patrol_paused - the same card explaining its blocked, paused reason
 ##   locked  - a scrolled view of blocked operations with their reasons
 ##   national - level 3 scrolled to the National Response Command Level lock
 ##
@@ -49,6 +51,12 @@ func _run() -> void:
 	var active := _active_state(now)
 	await _capture_state("active", active, now, false)
 
+	# Auto Patrol: one player-configured solo channel, both live and paused.
+	var patrol := _patrol_state(now, false)
+	await _capture_state("patrol", patrol, now, false)
+	var paused := _patrol_state(now, true)
+	await _capture_state("patrol_paused", paused, now, false)
+
 	# Locked: a fresh starter scrolled to the blocked half of the board.
 	var locked := Simulation.new_state(_pack, 1, now)
 	await _capture_state("locked", locked, now, true)
@@ -90,6 +98,22 @@ func _capture_agent(agent_id: String, role_id: String) -> Dictionary:
 		"activity": "available",
 		"attributes": {"power": 20, "speed": 20, "skill": 20},
 	}
+
+
+func _patrol_state(now: int, paused: bool) -> GameState:
+	var state := Simulation.new_state(_pack, 1, now)
+	state.upgrades["ops_patrol"] = 1
+	state.agents["hero_volt"]["attributes"] = {"power": 40, "speed": 40, "skill": 40}
+	var configured := AutoRepeat.configure_patrol(state, _pack, "s_alley", "hero_volt")
+	_check(configured.get("ok", false), "the patrol fixture selects a legal pair")
+	_check(AutoRepeat.set_patrol_enabled(state, true), "the patrol fixture is enabled")
+	if paused:
+		var deployed := Simulation.assign_task(state, _pack, "s_breakin", ["hero_volt"], now - 10)
+		_check(deployed.get("ok", false), "the paused fixture deploys the hero elsewhere")
+	else:
+		var started := AutoRepeat.resume_patrol(state, _pack, now)
+		_check(started.get("ok", false), "the live fixture starts the selected patrol")
+	return state
 
 
 func _active_state(now: int) -> GameState:
@@ -161,25 +185,55 @@ func _capture_state(
 	var content_rect := content.get_global_rect()
 	_check(content_rect.size.x > 0.0 and content_rect.size.y > 0.0, "content slot has size")
 
+	var patrol_scenario := state_name.begins_with("patrol")
 	var ready_button := board.deploy_button("s_alley")
-	_check(ready_button != null, "the starter operation has a deploy button")
-	if ready_button != null:
-		_check(
-			ready_button.size.y >= TaskBoard.MIN_TAP_HEIGHT,
-			"ready deploy button is at least 48px tall",
-		)
-		_check(not ready_button.disabled, "the starter operation is deployable")
-
 	var ready_card := board.find_child("Task_s_alley", true, false) as Control
-	_check(ready_card != null, "the starter operation has a card")
-	if not scroll_locked and ready_card != null and content_rect.size.y > 0.0:
-		_check(
-			ready_card.get_global_rect().intersects(content_rect),
-			"the starter card is visible in the content slot",
-		)
+	if not patrol_scenario:
+		_check(ready_button != null, "the starter operation has a deploy button")
+		if ready_button != null:
+			_check(
+				ready_button.size.y >= TaskBoard.MIN_TAP_HEIGHT,
+				"ready deploy button is at least 48px tall",
+			)
+			_check(not ready_button.disabled, "the starter operation is deployable")
 
-	var status := board.find_child("Status_s_alley", true, false) as Label
-	_check(status != null and status.text.contains("READY"), "ready work states READY")
+		_check(ready_card != null, "the starter operation has a card")
+		if not scroll_locked and ready_card != null and content_rect.size.y > 0.0:
+			_check(
+				ready_card.get_global_rect().intersects(content_rect),
+				"the starter card is visible in the content slot",
+			)
+
+		var status := board.find_child("Status_s_alley", true, false) as Label
+		_check(status != null and status.text.contains("READY"), "ready work states READY")
+
+	if patrol_scenario:
+		var card: AutoPatrolCard = board.auto_patrol_card()
+		_check(card != null, "the Auto Patrol card is present")
+		if card != null:
+			_check(card.get_global_rect().intersects(content_rect), "the Auto Patrol card fits the content width")
+			_check(card.size.y >= 120.0, "the Auto Patrol card exposes its full setup")
+			_check(card.agent_button().size.y >= 44.0, "the hero selector is a 44px touch target")
+			_check(card.operation_button().size.y >= 44.0, "the operation selector is a 44px touch target")
+			_check(card.toggle_button().visible and card.toggle_button().size.y >= 44.0, "the Enable/Pause target is visible and 44px tall")
+			_check(card.summary_text().contains("Alley Patrol"), "the card names the selected operation")
+			_check(not card.summary_text().contains("hero_volt"), "the card uses the display name, not the id")
+			if state_name == "patrol":
+				_check(card.status_text() == "PATROLLING", "the live card reads PATROLLING")
+				_check(card.reason_text().contains("on patrol"), "the live card explains the active patrol")
+			else:
+				_check(card.status_text() == "PAUSED", "the paused card reads PAUSED")
+				_check(card.reason_text().contains("Break-In Response"), "the paused card names the blocking operation")
+			_check(board.active_row_count() == 1, "the patrol operation has one active row")
+			print("AUTO_PATROL_GEOMETRY %s card=%s status=%s toggle=%s agent_selector=%sx%s reason=%s" % [
+				state_name,
+				str(card.size),
+				card.status_text(),
+				str(card.toggle_button().size),
+				str(card.agent_button().size.x),
+				str(card.agent_button().size.y),
+				card.reason_text(),
+			])
 
 	if state_name == "active":
 		_check(board.active_row_count() == 1, "active state has one live row")

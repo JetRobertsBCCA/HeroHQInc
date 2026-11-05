@@ -22,7 +22,7 @@
 		"required_agent_count": 1,
 		"minimum_rating": 80,
 		"required_role_ids": [],
-		"rewards": {"credits": 45},
+		"rewards": {"credits": 45, "intel": 2},
 		"xp": 12
 	},
 	{

@@ -14,6 +14,8 @@ extends Control
 
 signal deploy_requested(task_id: String)
 signal auto_repeat_retry_requested
+signal auto_patrol_configure_requested(task_id: String, agent_id: String)
+signal auto_patrol_enabled_requested(enabled: bool)
 
 const MIN_TAP_HEIGHT := 48
 const ACTION_WIDTH := 84
@@ -43,6 +45,7 @@ var _deploy_buttons: Dictionary = {}
 var _status_labels: Dictionary = {}
 var _reasons: Dictionary = {}
 var _auto_repeat: AutoRepeatBanner
+var _auto_patrol: AutoPatrolCard
 var _utc_now: int = 0
 var _task_count: int = 0
 var _ready_count: int = 0
@@ -83,6 +86,10 @@ func auto_repeat_banner() -> AutoRepeatBanner:
 	return _auto_repeat
 
 
+func auto_patrol_card() -> AutoPatrolCard:
+	return _auto_patrol
+
+
 ## The current progress percentage for a running assignment, or -1 when the
 ## assignment is not on the board.
 func active_progress(assignment_id: String) -> int:
@@ -113,6 +120,7 @@ func refresh(pack: GamePack, state: GameState, utc_now: int) -> void:
 	_utc_now = utc_now
 	_ensure_built()
 	_auto_repeat.refresh(pack, state)
+	_auto_patrol.refresh(pack, state)
 	_clear(_active_list)
 	_clear(_ready_list)
 	_clear(_locked_list)
@@ -259,6 +267,17 @@ func _ensure_built() -> void:
 	_auto_repeat.name = "AutoRepeat"
 	_auto_repeat.retry_requested.connect(func() -> void: auto_repeat_retry_requested.emit())
 	_root.add_child(_auto_repeat)
+
+	_auto_patrol = AutoPatrolCard.new()
+	_auto_patrol.name = "AutoPatrol"
+	_auto_patrol.configure_requested.connect(
+		func(task_id: String, agent_id: String) -> void:
+			auto_patrol_configure_requested.emit(task_id, agent_id)
+	)
+	_auto_patrol.enabled_requested.connect(
+		func(enabled: bool) -> void: auto_patrol_enabled_requested.emit(enabled)
+	)
+	_root.add_child(_auto_patrol)
 
 	_active_heading = _section_label(12, ThemeTokens.color(_pack, "success"))
 	_active_heading.name = "LiveHeading"

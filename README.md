@@ -45,7 +45,7 @@ godot --path . --resolution 360x640 -s res://tooling/network_capture.gd
 # capture HQ fresh / active-solo / active-squad / reduced-motion first viewports
 godot --path . --resolution 360x640 -s res://tooling/hq_viewport_capture.gd
 
-# capture the Mission board in fresh, active and locked states at 360x640
+# capture the Mission board in fresh, active, Auto Patrol live/paused and locked states at 360x640
 godot --path . --resolution 360x640 -s res://tooling/missions_viewport_capture.gd -- --tag=after
 ```
 
@@ -160,7 +160,7 @@ framework/                 shared, game-neutral engine (never names a title)
   ui/                      theme tokens, text formatting, portrait shell, resource bar,
                            touch scrolling
     screens/               task board, roster, team and rebirth screens
-    components/            resource bar widget
+    components/            resource bar and Auto Patrol card
 games/hero_hq/             HERO//HQ content pack — game #1
   manifest.json            5 tabs, credits/intel, 8h offline cap, data paths
   data/                    roles, starter agents + tuning, task ladder, progression
@@ -176,7 +176,7 @@ tooling/long_run_report.gd 7-day rebirth model + boredom-budget check
 tooling/playthrough_demo.gd  real-UI playthrough, fresh save to rebirth
 tooling/ui_capture.gd      windowed PNG capture of every tab
 tooling/network_capture.gd  controlled network state captures
-tooling/missions_viewport_capture.gd  strict Mission fresh/active/locked capture
+tooling/missions_viewport_capture.gd  strict Missions fresh/active/patrol/paused/locked/national capture
 ```
 
 **Dependency direction:** `games/* -> framework/*`. The framework never imports a
@@ -189,11 +189,15 @@ Working now: the loop end to end — deploy, settle (online and offline), earn,
 level up, train, recruit, research, rebirth, save, resume — on validated pack
 data, with an invalid pack rendering a readable error screen instead of crashing.
 Recruitment can target a role, HQ names the next objective, and Upgrades spends
-Intel on payout and training research plus an automation rank that repeats the
-last operation once per completion, including after a relaunch; a squad keeps
-its exact saved lineup and waits rather than substituting a missing or busy
-member. A live banner explains why a configured rule cannot start, offers Retry
-for a paused rule, and clears as soon as one of its inputs changes. The Teams tab
+Intel on payout and training research plus a 30-Intel squad auto-repeat rank
+that repeats a saved squad operation once per completion, including after a
+relaunch. A separate 2-Intel Auto Patrol repeats one solo operation only after
+the player has chosen a hero and an eligible operation and pressed Enable; its
+Missions card shows the live or paused reason and can be paused without
+cancelling work already running. A squad keeps its exact saved lineup and waits
+rather than substituting a missing or busy member. A live banner explains why a
+configured squad rule cannot start, offers Retry for a paused rule, and clears
+as soon as one of its inputs changes. The Teams tab
 previews every squad operation against the current roster: the members, their individual and average ratings
 against the gate, any missing role, and the exact blocking reason when it cannot
 deploy. A lineup can be saved per operation, updated after training, or cleared
@@ -226,10 +230,25 @@ heroes in 4 roles and one completed squad operation, then unlocks National
 Response. It derives from existing saved totals, needs no Intel or currently
 locked National job, and gates all four National operations through the same
 stage rule in direct deploys, Missions, Teams and auto-repeat. A no-grant route
-reaches City at 5:20 and National at 8:40 in-game: 3:20 later, 64 dispatches,
+reaches City at 5:20 and National at 8:40 in-game: 3:20 later, 60 dispatches,
 60 operations, 3,686 lifetime Credits, 5 agents in 4 roles and one completed
 squad, with a longest completion gap of 40 seconds and no deadlock. A National
 operation already running on an older save still settles normally.
+
+Before this tuning, Auto Patrol became affordable only at 8:40 after 64 manual
+dispatches. It now becomes affordable at the first Break-In Response Intel
+payout: at **5:50**, after **44 manual dispatches** and 40 operations. Its
+**2-Intel** branch is bought and enabled immediately, before the first squad.
+The selected non-squad hero is still finishing a deployed operation, so the card shows the
+paused reason for 30 seconds; the first automatic cycle starts at **6:20** and
+completes at **7:00**, after 51 manual dispatches and 40 seconds before the
+first squad completes at 7:40 for 850 Credits + 8 Intel. The route still reaches
+National at 8:40 with **60 manual dispatches**, 60 operations, 3,686 lifetime
+Credits, 5 agents in 4 roles and one squad; the National gate is unchanged. A
+nine-hour return then applies exactly 28,800 seconds: 720 away patrol starts,
+724 operations complete in the away pass including four other in-flight jobs,
+69,015 Credits are earned, and a second settlement pays nothing. Squad
+auto-repeat retains its separate 30-Intel branch and exact lineup behavior.
 
 City now has a role-shaped second tier: Convoy Ambush is the Support's
 high-rating solo, while Joint Raid is the better use of a Support and Striker
@@ -237,8 +256,8 @@ together. A fresh-save model reaches City at 4:40, starts the first squad at
 5:55 and completes it at 7:35, and clears all eight City firsts by 10:35 without
 an idle stall. The 15-operation ladder and Street gate are unchanged.
 
-Not implemented yet: command milestones beyond National Response, configured
-Auto Patrol and team autopilot with their wait reasons, team mastery,
+Not implemented yet: command milestones beyond National Response, team
+autopilot with its wait reasons, team mastery,
 synergies and named team slots, traits, specializations, legendaries, agency contracts, and
 an offline earnings report. Monetization (M6) and physical-device Android testing
 remain out of scope for this pass. The debug build runs on an emulator; release

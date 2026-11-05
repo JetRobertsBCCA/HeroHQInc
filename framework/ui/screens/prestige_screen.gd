@@ -135,6 +135,8 @@ func _effect_text(rules: Dictionary, branch_id: String) -> String:
 			)
 		Research.EFFECT_AUTO_REPEAT:
 			return _pack.label("research.automation_effect", "Repeats your last operation")
+		Research.EFFECT_AUTO_PATROL:
+			return _pack.label("research.auto_patrol_effect", "Repeats one chosen solo operation")
 	return branch_id
 
 

@@ -56,6 +56,10 @@ func _ready() -> void:
 		return
 	_pack = loaded["pack"]
 	_state = _restore_or_create_state()
+	# Older builds remembered solo work implicitly. Keep the operation as an
+	# unstarted patrol draft instead of letting it fire without a player choice.
+	if AutoRepeat.migrate_legacy_solo(_state):
+		SaveService.save_state(_state)
 	_reduced_motion = _read_reduced_motion()
 	_settle_absence()
 	# Re-arm a persisted auto-repeat after the absence has settled, before the
@@ -87,13 +91,16 @@ func _restore_or_create_state() -> GameState:
 
 
 ## Advances the simulation by the time the app was closed, and logs whatever
-## finished while the player was away.
+## finished while the player was away. Auto Patrol is re-armed only inside the
+## pack's offline allowance; a capped return advances the settlement stamp to
+## the launch instant so later ticks cannot keep claiming another full window.
 func _settle_absence() -> void:
-	var elapsed := float(_clock.now_utc() - _state.last_settled_utc)
-	var outcome := Simulation.simulate_delta(_state, elapsed, _pack)
+	var now := _clock.now_utc()
+	var outcome := AutoRepeat.settle_absence(_state, _pack, now)
 	_state = outcome["state"]
 	_settled_seconds = float(outcome["applied_seconds"])
-	_record_events(outcome.get("events", []))
+	var events: Array = outcome.get("events", [])
+	_record_events(events)
 	# Focus regenerates in wall-clock time too; settle it once at launch so a
 	# return after a long absence starts with the correct bank and timestamp.
 	HeroFocus.settle(_state, _pack, _clock.now_utc())
@@ -163,6 +170,8 @@ func _on_tab_selected(tab_id: String) -> void:
 		_task_board.name = "TaskBoard"
 		_task_board.deploy_requested.connect(_on_deploy_requested)
 		_task_board.auto_repeat_retry_requested.connect(_on_auto_repeat_retry_requested)
+		_task_board.auto_patrol_configure_requested.connect(_on_auto_patrol_configure_requested)
+		_task_board.auto_patrol_enabled_requested.connect(_on_auto_patrol_enabled_requested)
 		_task_board.refresh(_pack, _state, _clock.now_utc())
 		_shell.set_content(_task_board)
 		return
@@ -211,8 +220,6 @@ func _on_deploy_requested(task_id: String) -> void:
 		])
 		_refresh_content()
 		return
-	if Research.unlocked(_state, _pack, Research.EFFECT_AUTO_REPEAT):
-		AutoRepeat.remember(_state, task_id)
 	SaveService.save_state(_state)
 	_refresh_content()
 
@@ -303,6 +310,7 @@ func _on_rebirth_requested() -> void:
 		"chips": int(result["chips"]),
 	}])
 	AutoRepeat.forget(_state)
+	AutoRepeat.forget_patrol(_state)
 	SaveService.save_state(_state)
 	_refresh_content()
 
@@ -382,19 +390,46 @@ func _on_auto_repeat_retry_requested() -> void:
 	_refresh_content()
 
 
-## Repeats the remembered operation once it finishes, but only when the
-## research branch is bought. One repeat per completion, never a chain. The
-## rule lives in the save, so this also works after the app was killed and the
-## operation completed while it was closed.
+## Stores the player's explicit hero and solo-operation choice. This is only a
+## selection; enabling is a separate action and a deployment is separate again.
+func _on_auto_patrol_configure_requested(task_id: String, agent_id: String) -> void:
+	var result := AutoRepeat.configure_patrol(_state, _pack, task_id, agent_id)
+	if not bool(result.get("ok", false)):
+		_log("%s: %s" % [
+			_pack.label("ui.auto_patrol_title", "Auto Patrol"),
+			_pack.label(
+				"ui.blocked_%s" % str(result.get("code", "")),
+				str(result.get("code", "")),
+			),
+		])
+		_refresh_content()
+		return
+	if AutoRepeat.patrol_enabled(_state):
+		AutoRepeat.resume_patrol(_state, _pack, _clock.now_utc())
+	SaveService.save_state(_state)
+	_refresh_content()
+
+
+## Enable/Pause is the player-controlled manual-to-idle switch. Enabling starts
+## at most one operation for the chosen hero and leaves all other work alone.
+func _on_auto_patrol_enabled_requested(enabled: bool) -> void:
+	if not AutoRepeat.set_patrol_enabled(_state, enabled):
+		return
+	if enabled:
+		AutoRepeat.resume_patrol(_state, _pack, _clock.now_utc())
+	SaveService.save_state(_state)
+	_refresh_content()
+
+
+## Repeats the remembered squad operation once it finishes, then independently
+## re-arms the explicitly enabled solo patrol. Both use the same guarded resume
+## paths, so a shared or busy hero pauses one channel instead of double-paying
+## or stealing a slot.
 func _maybe_auto_repeat(now: int) -> void:
-	if AutoRepeat.task_id(_state).is_empty():
-		return
-	var result := AutoRepeat.resume(_state, _pack, now)
-	if not result.get("ok", false):
-		# A locked or removed task is dropped by resume(); persist that. Any
-		# other refusal keeps the rule so the screen can explain it.
-		SaveService.save_state(_state)
-		return
+	if not AutoRepeat.task_id(_state).is_empty():
+		AutoRepeat.resume(_state, _pack, now)
+	if AutoRepeat.patrol_enabled(_state):
+		AutoRepeat.resume_patrol(_state, _pack, now)
 	SaveService.save_state(_state)
 
 

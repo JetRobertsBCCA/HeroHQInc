@@ -416,6 +416,111 @@ func test_team_auto_repeat_banner_names_a_locked_slot_and_recovers() -> void:
 	screen.free()
 
 
+func test_auto_patrol_card_is_locked_before_research() -> void:
+	var pack := _pack()
+	var state := Simulation.new_state(pack, 1, 1000)
+	var board := TaskBoard.new()
+	board.refresh(pack, state, 1000)
+	var card := board.auto_patrol_card()
+	assert_true(card != null, "Missions exposes the Auto Patrol card")
+	if card == null:
+		board.free()
+		return
+	assert_eq(card.status_text(), pack.label("ui.auto_patrol_locked", "Locked").to_upper(), "the locked state is explicit")
+	assert_true(card.reason_text().contains("2"), "the card states the two-Intel price")
+	assert_false(card.toggle_button().visible, "no toggle is offered before the research")
+	board.free()
+
+
+func test_auto_patrol_card_collects_only_eligible_solo_choices() -> void:
+	var pack := _pack()
+	var state := Simulation.new_state(pack, 1, 1000)
+	state.upgrades["ops_patrol"] = 1
+	var board := TaskBoard.new()
+	board.refresh(pack, state, 1000)
+	var card := board.auto_patrol_card()
+	assert_true(card != null, "the unlocked card builds")
+	if card == null:
+		board.free()
+		return
+	assert_eq(card.status_text(), pack.label("ui.auto_patrol_not_set", "Not set").to_upper(), "an empty channel reads Not set")
+	assert_true(card.toggle_button().disabled, "Enable waits for both choices")
+
+	var requests: Array = []
+	board.auto_patrol_configure_requested.connect(
+		func(task_id: String, agent_id: String) -> void:
+			requests.append({"task_id": task_id, "agent_id": agent_id})
+	)
+	card.agent_button().pressed.emit()
+	assert_eq(card.picker_open(), "agent", "the agent chooser opens inline")
+	var agent_choice := card.agent_choice_button("hero_volt")
+	assert_true(agent_choice != null and not agent_choice.disabled, "the starter agent is offered")
+	if agent_choice != null:
+		agent_choice.pressed.emit()
+	assert_eq(requests.size(), 1, "choosing an agent emits one configuration request")
+	if requests.size() == 1:
+		assert_eq(str(requests[0]["agent_id"]), "hero_volt", "the request names the agent")
+		assert_eq(str(requests[0]["task_id"]), "", "the operation waits for a second choice")
+
+	var configured := AutoRepeat.configure_patrol(state, pack, "s_alley", "hero_volt")
+	assert_true(configured.get("ok", false), "the card can show a stored selection")
+	board.refresh(pack, state, 1000)
+	card = board.auto_patrol_card()
+	assert_eq(card.status_text(), pack.label("ui.auto_patrol_off", "Off").to_upper(), "a chosen channel starts off")
+	assert_eq(card.toggle_button().text, pack.label("ui.auto_patrol_enable", "Enable Auto Patrol"), "the deliberate Enable action is shown")
+	assert_false(card.toggle_button().disabled, "a complete selection can be enabled")
+	assert_true(card.summary_text().contains("Alley Patrol"), "the summary names the operation")
+
+	card.operation_button().pressed.emit()
+	assert_eq(card.picker_open(), "operation", "the operation chooser opens inline")
+	var alley_choice := card.operation_choice_button("s_alley")
+	assert_true(alley_choice != null, "the legal solo operation is offered")
+	assert_true(card.operation_choice_button("s_drone") == null, "a Command-locked operation is not offered")
+	assert_true(card.operation_choice_button("s_raid") == null, "a squad operation is not offered")
+	var toggles: Array = []
+	board.auto_patrol_enabled_requested.connect(func(enabled: bool) -> void: toggles.append(enabled))
+	card.toggle_button().pressed.emit()
+	assert_eq(toggles.size(), 1, "Enable emits one request")
+	if toggles.size() == 1:
+		assert_true(bool(toggles[0]), "the request turns the channel on")
+	board.free()
+
+
+func test_auto_patrol_card_shows_live_and_paused_reasons() -> void:
+	var pack := _pack()
+	var state := Simulation.new_state(pack, 1, 1000)
+	state.upgrades["ops_patrol"] = 1
+	state.agents["hero_volt"]["attributes"] = {"power": 40, "speed": 40, "skill": 40}
+	AutoRepeat.configure_patrol(state, pack, "s_alley", "hero_volt")
+	AutoRepeat.set_patrol_enabled(state, true)
+	var deployed := Simulation.assign_task(state, pack, "s_breakin", ["hero_volt"], 1000)
+	assert_true(deployed.get("ok", false), "the chosen agent can be busy on another operation")
+	var board := TaskBoard.new()
+	board.refresh(pack, state, 1000)
+	var card := board.auto_patrol_card()
+	assert_true(card != null, "the card builds with a paused channel")
+	if card == null:
+		board.free()
+		return
+	assert_eq(card.status_text(), pack.label("ui.auto_patrol_paused", "Paused").to_upper(), "a busy agent reads Paused")
+	assert_true(card.reason_text().contains("Break-In Response"), "the paused reason names the blocking operation")
+	assert_eq(card.toggle_button().text, pack.label("ui.auto_patrol_disable", "Pause Auto Patrol"), "the player can still pause it")
+
+	Simulation.simulate_delta(state, 30.0, pack)
+	board.refresh(pack, state, 1030)
+	card = board.auto_patrol_card()
+	assert_eq(card.status_text(), pack.label("ui.auto_patrol_armed", "Armed").to_upper(), "freeing the agent re-arms the selection")
+	assert_true(card.reason_text().contains("Starts whenever"), "the live reason explains the next start")
+	var started := AutoRepeat.resume_patrol(state, pack, 1030)
+	assert_true(started.get("ok", false), "the armed channel starts its selected operation")
+	board.refresh(pack, state, 1030)
+	card = board.auto_patrol_card()
+	assert_eq(card.status_text(), pack.label("ui.auto_patrol_patrolling", "Patrolling").to_upper(), "an active patrol reads Patrolling")
+	assert_true(card.reason_text().contains("on patrol"), "the live reason says the agent is on patrol")
+	assert_eq(board.active_row_count(), 1, "the active operation remains on the board")
+	board.free()
+
+
 func _add_squad_agents(pack: GamePack, state: GameState) -> void:
 	var attributes: Dictionary = {}
 	for attribute in Recruitment.attribute_names(pack):

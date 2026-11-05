@@ -3,6 +3,104 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.19 — Player-controlled Auto Patrol (2026-11-05)
+
+Status: development verification complete headlessly and with 360×640 windowed
+captures; no formal reviewer playtest or new Android device pass was started.
+
+### What was wrong
+
+A manual solo deployment still armed the old auto-repeat rule implicitly. The
+manual-to-idle transition was something the game did after a tap, not something
+the player chose. The solo channel had no visible selection, status, pause
+control or recovery reason, and a relaunch could not resume a chosen solo
+operation.
+
+### What changed
+
+- `ops_patrol` is a separate one-rank research branch costing **2 Intel**. The
+  first Break-In Response completion after City entry pays those 2 Intel, so the
+  player can choose their first automatic cycle in the early City phase. It
+  grants `auto_patrol`; the existing squad `ops_automation` / `repeat_task`
+  branch stays at 30 Intel and its behavior is unchanged. Both use the same
+  `AutoRepeat` resume path and neither is a parallel scheduler.
+- A patrol is one saved `{"type":"auto_patrol", "task_id", "agent_id",
+  "enabled"}` rule. The player chooses a hero and one eligible solo operation;
+  choosing does not start work, and Enable is a separate action. The card shows
+  Off, Armed, Patrolling or Paused and keeps the current blocking reason.
+- `AutoRepeat.patrol_status`, `configure_patrol`, `set_patrol_enabled`,
+  `eligible_solo_task_ids` and `resume_patrol` gate the rule through the real
+  `Simulation.evaluate_assignment`. Command stage, role, rating, slot and busy
+  checks therefore match direct deployment. A busy hero can stay selected so
+  the card can explain why the next cycle is paused.
+- Manual solo deployment no longer writes an implicit repeat. Older implicit
+  solo rules are removed and their operation becomes an unstarted, disabled
+  draft with no hero; squad rules are kept. The choice and enabled switch
+  persist in `automation_rules` without a save-schema change.
+- Launch settlement now runs through `AutoRepeat.settle_absence`: it settles
+  existing work through the same `Simulation` completion path, starts at most
+  one chosen patrol each time the hero is free, honors the eight-hour offline
+  allowance, and stamps a capped launch to the actual return time. A later tick
+  or relaunch cannot claim another full window or pay the same cycle again.
+- `AutoPatrolCard` sits at the top of Missions with 48px hero, operation and
+  Enable/Pause controls, an inline chooser limited to legal solo work, and a
+  live/paused reason. The app handles selection and Enable/Pause, saves the rule
+  immediately, and refreshes the card without rebuilding a second scheduler.
+  Content version is 6; save schema remains 1.
+- `tooling/national_route.gd` now records the first completion where reachable
+  Intel covers the price, buys `ops_patrol` with earned Intel, selects a legal
+  pair, and exercises a nine-hour launch against the cap and a second
+  settlement. `tooling/missions_viewport_capture.gd` adds live and paused Auto
+  Patrol states to its 360×640 assertions.
+
+### Route check
+
+Before this tuning, the route first earned Intel with the first squad at 7:40
+(8 Intel), bought no Research, and first made Auto Patrol affordable at 8:40
+after **64 manual dispatches**. The tuned route's first Intel arrived at
+**5:50** from Break-In Response: **2 Intel**, which exactly funded the branch.
+It had taken **44 manual dispatches** and 40 operations to reach City at 5:20
+and then clear that job. The route bought and enabled Auto Patrol immediately
+at 5:50, choosing a non-squad hero so the Support/Striker squad pair stayed
+free. That hero was still deployed, so the card's paused path was exercised;
+the first patrol started at 6:20 and its first automatic cycle completed at
+7:00 after 51 manual dispatches. The first squad still paid at 7:40: 850
+Credits and 8 Intel.
+
+The route still reached National at 8:40 with **60 manual dispatches** (four
+fewer than the baseline), 60 completed operations, 3,686 lifetime Credits, 5
+agents in 4 roles and 1 squad. Auto Patrol had completed 3 cycles during the
+route. The Command Level 3/4 gates were untouched.
+
+A nine-hour return applied exactly the 28,800-second allowance and reported
+`capped=true`: 720 away patrol starts, 724 away completions including four
+other in-flight jobs, and 69,015 Credits. A second settlement at the same
+instant applied zero seconds, paid no credits and left the task count unchanged.
+The route still reports the National snapshot at 60 dispatches / 60 tasks /
+3,686 Credits rather than the post-catch-up totals.
+
+### Checks
+
+- Godot headless suite: **152/152 passed**. Coverage includes the card lock and
+  legal picker, selecting and enabling through the real app, Pause and
+  re-enable without a duplicate deployment, save/reload persistence, the early
+  Break-In payout funding the 2-Intel branch, and a nine-hour launch that
+  settles 1,440 twenty-second patrols once with no second payout.
+- `tooling/validate_packs.gd`: `OK hero_hq`, 1 pack checked, 0 invalid.
+- `tooling/national_route.gd`: exit **0**, `ROUTE_OK`; Auto Patrol became
+  affordable and enabled at 5:50 after 44 manual dispatches and 40 tasks, with
+  2 Intel from Break-In Response. Its first cycle completed at 7:00; the first
+  squad still paid at 7:40 and National still unlocked at 8:40.
+- 360×640 windowed captures: the Auto Patrol card is **336×183**, both selectors
+  are **157×48**, and Enable/Pause is **320×48**. Live reads `PATROLLING` with
+  “The selected hero is on patrol.”; paused reads `PAUSED` with “The selected
+  hero is deployed on Break-In Response.” The board still shows its active row
+  and locked ladder below the card.
+- Captures: `ui_shots/missions_after_patrol.png` and
+  `ui_shots/missions_after_patrol_paused.png`, alongside the existing fresh,
+  active, locked and National states.
+- No formal reviewer playtest or reviewer chat was started.
+
 ## M1.18 — National Response Command Level (2026-11-05)
 
 Status: development verification complete headlessly and with 360×640 windowed

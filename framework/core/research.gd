@@ -19,7 +19,8 @@ extends RefCounted
 const EFFECT_REWARD := "reward_multiplier"
 const EFFECT_TRAINING := "training_discount"
 const EFFECT_AUTO_REPEAT := "auto_repeat"
-const SUPPORTED_EFFECTS := [EFFECT_REWARD, EFFECT_TRAINING, EFFECT_AUTO_REPEAT]
+const EFFECT_AUTO_PATROL := "auto_patrol"
+const SUPPORTED_EFFECTS := [EFFECT_REWARD, EFFECT_TRAINING, EFFECT_AUTO_REPEAT, EFFECT_AUTO_PATROL]
 
 const ERROR_UNAVAILABLE := "research_unavailable"
 const ERROR_UNKNOWN := "research_unknown"

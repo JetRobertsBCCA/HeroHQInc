@@ -314,25 +314,37 @@ func test_older_save_needs_a_completed_squad_for_national() -> void:
 	SaveService.delete_profile(PROFILE_ID)
 
 
-func test_four_national_operations_share_the_auto_repeat_gate() -> void:
+func test_national_automation_obeys_the_command_gate() -> void:
 	var pack := _pack()
 	var state := _level_three_state(pack)
 	state.agents["test_vanguard"] = _agent("test_vanguard", "vanguard")
-	state.upgrades["ops_automation"] = 1
-	for raw_id in NATIONAL_TASKS:
-		var task_id := str(raw_id)
-		AutoRepeat.remember(state, task_id)
-		var status := AutoRepeat.status(state, pack)
+	state.upgrades["ops_patrol"] = 1
+	for task_id in ["s_siege", "s_breach"]:
+		AutoRepeat.configure_patrol(state, pack, task_id, "test_vanguard")
+		AutoRepeat.set_patrol_enabled(state, true)
+		var status := AutoRepeat.patrol_status(state, pack)
 		assert_eq(
 			str(status.get("code", "")),
 			Simulation.ERROR_STAGE_LOCKED,
-			"auto-repeat refuses %s at the stage gate" % task_id,
+			"Auto Patrol refuses %s at the stage gate" % task_id,
 		)
 		assert_eq(int(status.get("required_command_level", 0)), 4, "%s reports level 4" % task_id)
 		assert_eq(int(status.get("current_command_level", 0)), 3, "%s reports the current level" % task_id)
-		var resumed := AutoRepeat.resume(state, pack, NOW)
+		var resumed := AutoRepeat.resume_patrol(state, pack, NOW)
 		assert_false(resumed.get("ok", true), "%s does not resume while locked" % task_id)
 		assert_eq(state.assignments.size(), 0, "%s schedules nothing while locked" % task_id)
+
+	# The squad channel keeps its own National gate as well.
+	state.upgrades["ops_automation"] = 1
+	AutoRepeat.remember(state, "s_blackout", ["test_tech", "test_vanguard"])
+	var squad_status := AutoRepeat.status(state, pack)
+	assert_eq(
+		str(squad_status.get("code", "")),
+		Simulation.ERROR_STAGE_LOCKED,
+		"squad auto-repeat refuses National work at the stage gate",
+	)
+	assert_false(AutoRepeat.resume(state, pack, NOW).get("ok", true), "squad National work stays locked")
+	assert_eq(state.assignments.size(), 0, "neither channel schedules locked National work")
 
 
 func test_in_flight_legacy_national_assignment_still_settles() -> void:

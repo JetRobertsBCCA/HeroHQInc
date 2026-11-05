@@ -229,7 +229,7 @@ func test_retry_does_not_bypass_a_locked_slot() -> void:
 func test_a_removed_operation_is_forgotten_instead_of_left_stale() -> void:
 	var pack := _pack()
 	var state := _state(pack)
-	AutoRepeat.remember(state, "s_not_in_pack")
+	AutoRepeat.remember(state, "s_not_in_pack", ["test_striker", "test_support"])
 	assert_eq(str(AutoRepeat.status(state, pack).get("code", "")), Simulation.ERROR_UNKNOWN_TASK, "the missing operation is reported")
 	var result := AutoRepeat.resume(state, pack, 1000)
 	assert_false(result.get("ok", true), "the missing operation does not deploy")
