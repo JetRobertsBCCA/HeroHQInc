@@ -6,7 +6,7 @@ coordinated citywide agency while the player builds, trains and automates teams.
 
 - **Engine:** Godot **4.7.2** stable, GDScript, `gl_compatibility` renderer
 - **Target:** Android first, portrait, 360×640 logical canvas with safe-area insets
-- **Status:** **v1 core loop complete** (M1.12) + **M1.13 Operations Network visual/readability pass** — fresh save to rebirth with manual squad lineups, Focus and offline settlement, played end to end; debug APK verified on an Android 35 emulator (see [docs/ANDROID.md](docs/ANDROID.md)). Focus and the live network are headless/capture-verified but neither has had a new device pass; remaining MVP gaps are listed below.
+- **Status:** **v1 core loop complete** (M1.12) + **M1.13 Operations Network visual/readability pass** + **M1.21 hero traits** — fresh save to rebirth with manual squad lineups, Focus, traits and offline settlement, played end to end; debug APK verified on an Android 35 emulator (see [docs/ANDROID.md](docs/ANDROID.md)). Focus, the live network and the trait cards are headless/capture-verified but the trait pass has not had a new device pass; remaining MVP gaps are listed below.
 - **Design source of truth:** `HERO_HQ_MASTER_CODEX.md` (see *Design document* below)
 
 ## Run it
@@ -173,7 +173,7 @@ framework/                 shared, game-neutral engine (never names a title)
     components/            resource bar and Auto Patrol card
 games/hero_hq/             HERO//HQ content pack — game #1
   manifest.json            5 tabs, credits/intel, 8h offline cap, data paths
-  data/                    roles, starter agents + tuning, task ladder, progression
+  data/                    roles, starter agents + tuning, traits, task ladder, progression
   rules/focus.gd           HERO//HQ Focus rules and persisted state
   locale/en.json           every player-facing string
   ui/theme.json            palette as generic theme tokens
@@ -214,6 +214,16 @@ against the gate, any missing role, and the exact blocking reason when it cannot
 deploy. A lineup can be saved per operation, updated after training, or cleared
 to return to auto-selection.
 
+Every hero now carries one data-backed trait. Volt starts with Tactical Mind;
+each recruit derives a stable trait from its pool slot, and both the roster row
+and both offer cards show the name and exact effect. Ten launch traits cover
+training XP, solo pace, Credits, Intel, task XP, squad/role/category rating and
+automatic rewards. Modifiers are additive and filter by solo/squad, category,
+role, resource or automatic work. Automatic deployments rank available heroes
+by the trait-adjusted rating for the operation, and Teams shows that same task
+rating in its drafts and slot list. Older saves backfill a missing trait without
+a save-schema migration.
+
 The HQ Focus card projects every pulse before the tap; its bank, spent points,
 deadlines and per-operation cooldowns survive a save round trip. HQ's Operations
 Network now mirrors live solo and squad assignments instead of drawing the
@@ -232,14 +242,14 @@ are derived from existing saved totals, so older profiles need no migration; a
 City operation already running when the gate arrives still settles. The visible
 Tech/Support offers and Street operations are enough to reach level 3 without
 Intel. The current deterministic fresh-save route with no grants reaches City at
-6:00 in-game with 34 dispatches, 44 completed operations, 1,624 lifetime
+5:40 in-game with 32 dispatches, 41 completed operations, 1,513 lifetime
 Credits, 4 agents and 4 roles; that route found no deadlock, with a longest
 completion gap of 40 seconds.
 
 The separate real-UI no-grant check, `tooling/playthrough_demo.gd`, now starts
 with the pack's 50 Credits and 0 Intel, hires Tech through the visible 50-Credit
 card at 0:40, earns Support and Vanguard from refreshed visible offers, and
-reaches City at 6:10 with 47 dispatches, 47 completed operations, 1,628 lifetime
+reaches City at 6:10 with 47 dispatches, 47 completed operations, 1,650 lifetime
 Credits, 4 agents and 4 roles. It then trains the Tech to 110, clears Signal
 Pursuit, buys payout research, raises Volt to level 7 and completes the
 two-step rebirth; the run restores the player's save and reports PASS. It
@@ -251,8 +261,8 @@ heroes in 4 roles and one completed squad operation, then unlocks National
 Response. It derives from existing saved totals, needs no Intel or currently
 locked National job, and gates all four National operations through the same
 stage rule in direct deploys, Missions, Teams and auto-repeat. A no-grant route
-reaches City at 6:00 and National at 9:50 in-game: 3:50 later, 60 dispatches,
-79 completed operations, 3,909 lifetime Credits, 5 agents in 5 roles and one
+reaches City at 5:40 and National at 9:20 in-game: 3:40 later, 57 dispatches,
+76 completed operations, 3,796 lifetime Credits, 5 agents in 5 roles and one
 completed squad, with a longest completion gap of 40 seconds and no deadlock. A National
 operation already running on an older save still settles normally.
 
@@ -263,22 +273,22 @@ Intel payout: at **2:10**, after **10 manual dispatches** and 7 operations. Its
 The selected non-squad hero is still finishing a deployed operation, so the card
 shows the paused reason; the first automatic cycle starts at **2:20** and
 completes at **2:40**, after 12 manual dispatches. The route still reaches
-National at 9:50 with **60 manual dispatches**, 79 completed operations, 3,909
+National at 9:20 with **57 manual dispatches**, 76 completed operations, 3,796
 lifetime Credits, 5 agents in 5 roles and one squad; the National gate is
-unchanged. A nine-hour return then applies exactly 28,800 seconds: 1,440 away
-patrol starts, 1,444 operations complete in the away pass including four other
-in-flight jobs, 26,191 Credits are earned, and a second settlement pays nothing.
+unchanged. A nine-hour return then applies exactly 28,800 seconds: 1,439 away
+patrol starts, 1,442 operations complete in the away pass alongside the other
+in-flight jobs, 26,160 Credits are earned, and a second settlement pays nothing.
 Squad auto-repeat retains its separate 30-Intel branch and exact lineup
 behavior.
 
 City now has a role-shaped second tier: Convoy Ambush is the Support's
 high-rating solo, while Joint Raid is the better use of a Support and Striker
-together. The current no-grant route completes the first Joint Raid at 8:20;
+together. The current no-grant route completes the first Joint Raid at 7:50;
 the 15-operation ladder and Street gate are unchanged.
 
 Not implemented yet: command milestones beyond National Response, team
 autopilot with its wait reasons, team mastery,
-synergies and named team slots, traits, specializations, legendaries, agency contracts, and
+synergies and named team slots, specializations, legendaries, agency contracts, and
 an offline earnings report. Monetization (M6) and physical-device Android testing
 remain out of scope for this pass. The debug build runs on an emulator; release
 signing, an app icon and a phone run remain.

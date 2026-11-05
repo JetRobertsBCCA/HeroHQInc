@@ -1,0 +1,88 @@
+[
+	{
+		"id": "quick_learner",
+		"name_key": "traits.quick_learner",
+		"description_key": "traits.quick_learner.desc",
+		"modifiers": [
+			{"type": "training_xp", "value": 0.15}
+		]
+	},
+	{
+		"id": "night_watch",
+		"name_key": "traits.night_watch",
+		"description_key": "traits.night_watch.desc",
+		"modifiers": [
+			{
+				"type": "task_reward",
+				"value": 0.10,
+				"resource_id": "credits",
+				"task_kind": "solo",
+				"category_id": "crime"
+			}
+		]
+	},
+	{
+		"id": "tactical_mind",
+		"name_key": "traits.tactical_mind",
+		"description_key": "traits.tactical_mind.desc",
+		"modifiers": [
+			{"type": "rating", "value": 0.08, "task_kind": "squad"}
+		]
+	},
+	{
+		"id": "sprinter",
+		"name_key": "traits.sprinter",
+		"description_key": "traits.sprinter.desc",
+		"modifiers": [
+			{"type": "duration", "value": -0.12, "task_kind": "solo"}
+		]
+	},
+	{
+		"id": "investigator",
+		"name_key": "traits.investigator",
+		"description_key": "traits.investigator.desc",
+		"modifiers": [
+			{"type": "task_reward", "value": 0.10, "resource_id": "intel"}
+		]
+	},
+	{
+		"id": "crowd_favorite",
+		"name_key": "traits.crowd_favorite",
+		"description_key": "traits.crowd_favorite.desc",
+		"modifiers": [
+			{"type": "task_reward", "value": 0.10, "resource_id": "credits"}
+		]
+	},
+	{
+		"id": "team_player",
+		"name_key": "traits.team_player",
+		"description_key": "traits.team_player.desc",
+		"modifiers": [
+			{"type": "task_xp", "value": 0.08, "task_kind": "squad"}
+		]
+	},
+	{
+		"id": "unbreakable",
+		"name_key": "traits.unbreakable",
+		"description_key": "traits.unbreakable.desc",
+		"modifiers": [
+			{"type": "rating", "value": 0.10, "category_id": "rescue"}
+		]
+	},
+	{
+		"id": "arcane_talent",
+		"name_key": "traits.arcane_talent",
+		"description_key": "traits.arcane_talent.desc",
+		"modifiers": [
+			{"type": "rating", "value": 0.10, "role_id": "mystic"}
+		]
+	},
+	{
+		"id": "efficient",
+		"name_key": "traits.efficient",
+		"description_key": "traits.efficient.desc",
+		"modifiers": [
+			{"type": "task_reward", "value": 0.08, "automatic": true}
+		]
+	}
+]

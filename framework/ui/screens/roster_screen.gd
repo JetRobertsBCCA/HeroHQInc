@@ -157,6 +157,16 @@ func _agent_row(agent_id: String, agent: Dictionary) -> Control:
 	role_label.add_theme_color_override("font_color", ThemeTokens.color(_pack, "muted"))
 	column.add_child(role_label)
 
+	var trait_name := TraitRules.display_name(_pack, agent)
+	if not trait_name.is_empty():
+		var trait_label := Label.new()
+		trait_label.name = "AgentTrait_%s" % agent_id
+		trait_label.text = _trait_text(agent)
+		trait_label.add_theme_font_size_override("font_size", 10)
+		trait_label.add_theme_color_override("font_color", ThemeTokens.color(_pack, "accent_alt"))
+		trait_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		column.add_child(trait_label)
+
 	var threshold := AgentRules.xp_threshold(_pack.leveling, level)
 	var progress := ProgressBar.new()
 	progress.min_value = 0.0
@@ -300,6 +310,16 @@ func _recruit_offer_card(offer: Dictionary) -> Control:
 	role_label.add_theme_color_override("font_color", ThemeTokens.color(_pack, "muted"))
 	column.add_child(role_label)
 
+	var trait_name := TraitRules.display_name(_pack, offer)
+	if not trait_name.is_empty():
+		var trait_label := Label.new()
+		trait_label.name = "OfferTrait_%s" % agent_id
+		trait_label.text = _trait_text(offer)
+		trait_label.add_theme_font_size_override("font_size", 10)
+		trait_label.add_theme_color_override("font_color", ThemeTokens.color(_pack, "accent_alt"))
+		trait_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		column.add_child(trait_label)
+
 	var attributes_label := Label.new()
 	attributes_label.name = "OfferAttrs_%s" % agent_id
 	attributes_label.text = _attribute_text(offer.get("attributes", {}))
@@ -361,6 +381,14 @@ func _attribute_text(attributes: Variant) -> String:
 		var label := _pack.label("attributes.%s" % name, name.capitalize())
 		parts.append("%s %d" % [label, int(values.get(name, 0))])
 	return " · ".join(parts)
+
+
+func _trait_text(agent: Dictionary) -> String:
+	var name := TraitRules.display_name(_pack, agent)
+	var description := TraitRules.description(_pack, agent)
+	if description.is_empty():
+		return "%s · %s" % [_pack.label("ui.trait", "Trait"), name]
+	return "%s · %s — %s" % [_pack.label("ui.trait", "Trait"), name, description]
 
 
 func _on_recruit_pressed(agent_id: String) -> void:

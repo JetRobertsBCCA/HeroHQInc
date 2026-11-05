@@ -62,6 +62,9 @@ static func load_pack_from_root(root: String, expected_game_id: String = "") -> 
 	pack.progression = _read_json_dictionary(normalized.path_join(str(_data_path(manifest, "progression"))))
 	pack.roles = _index_by_id(_read_json_array(normalized.path_join(str(_data_path(manifest, "roles")))))
 	pack.missions = _index_by_id(_read_json_array(normalized.path_join(str(_data_path(manifest, "missions")))))
+	var traits_path := _data_path(manifest, "traits")
+	if not traits_path.is_empty():
+		pack.traits = _index_by_id(_read_json_array(normalized.path_join(traits_path)))
 	var agents_document := _read_json_dictionary(normalized.path_join(str(_data_path(manifest, "agents"))))
 	pack.starter_agents = _index_by_id(_typed_array(agents_document.get("starting_agents")))
 	pack.leveling = _typed_dictionary(agents_document.get("leveling"))

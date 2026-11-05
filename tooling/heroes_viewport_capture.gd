@@ -116,10 +116,12 @@ func _capture_state(state_name: String, state: GameState) -> void:
 		var attrs_label := card.find_child("OfferAttrs_*", true, false) as Label
 		var fit_label := card.find_child("OfferFit_*", true, false) as Label
 		var rating_label := card.find_child("OfferRating_*", true, false) as Label
+		var trait_label := card.find_child("OfferTrait_*", true, false) as Label
 		_check(role_label != null and not role_label.text.is_empty(), "offer %s names role and tier" % agent_id)
 		_check(attrs_label != null and attrs_label.text.contains("Power") and attrs_label.text.contains("Speed") and attrs_label.text.contains("Skill"), "offer %s shows all three attributes" % agent_id)
 		_check(fit_label != null and fit_label.text.begins_with("Adds"), "offer %s explains its roster fit" % agent_id)
 		_check(rating_label != null and rating_label.text.contains("Rating"), "offer %s shows its rating" % agent_id)
+		_check(trait_label != null and trait_label.text.contains("Trait"), "offer %s shows its trait" % agent_id)
 		_check(button.text.contains("Credits"), "offer %s shows its exact Credit price" % agent_id)
 		_check(button.size.y >= RosterScreen.MIN_TAP_HEIGHT, "offer %s hire target is at least 48px tall" % agent_id)
 		var rect := card.get_global_rect()
@@ -136,6 +138,7 @@ func _capture_state(state_name: String, state: GameState) -> void:
 				roles.append(str(offer.get("role_id", "")))
 				_check(role_label.text.contains(_pack.label(str(_pack.role(str(offer["role_id"])).get("name_key", "")), str(offer["role_id"]))), "offer %s displays its role name" % agent_id)
 				_check(role_label.text.contains(_pack.label("tiers.%s" % str(offer["tier_id"]), str(offer["tier_id"]))), "offer %s displays its tier" % agent_id)
+				_check(trait_label != null and trait_label.text.contains(TraitRules.display_name(_pack, offer)), "offer %s displays its trait name" % agent_id)
 	_check(both_visible, "both offer cards fit inside the first 360x640 viewport")
 	_check(roles.size() == 2 and roles[0] != roles[1], "the two offers have distinct roles")
 

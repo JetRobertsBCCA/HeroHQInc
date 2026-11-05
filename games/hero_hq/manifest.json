@@ -1,7 +1,7 @@
 {
 	"pack_schema_version": 1,
 	"game_id": "hero_hq",
-	"content_version": 6,
+	"content_version": 7,
 	"display_name_key": "game.title",
 	"default_locale": "en",
 	"entry_scene": "res://games/hero_hq/scenes/app.tscn",
@@ -12,7 +12,8 @@
 		"squads",
 		"timed_tasks",
 		"automation",
-		"focus"
+		"focus",
+		"traits"
 	],
 	"resources": ["credits", "intel"],
 	"starting_resources": {
@@ -90,6 +91,7 @@
 	"data_paths": {
 		"roles": "data/roles.json",
 		"agents": "data/agents.json",
+		"traits": "data/traits.json",
 		"missions": "data/missions.json",
 		"progression": "data/progression.json"
 	},

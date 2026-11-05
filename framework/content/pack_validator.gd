@@ -46,6 +46,7 @@ const SUPPORTED_MECHANICS: Array[String] = [
 	"timed_tasks",
 	"automation",
 	"focus",
+	"traits",
 ]
 
 const SUPPORTED_TASK_KINDS: Array[String] = ["solo", "squad"]
@@ -98,6 +99,10 @@ static func validate_pack_root(root: String) -> Array[Dictionary]:
 	var tasks := _read_json_array(normalized.path_join(data_path(manifest, "missions")))
 	var agents_document := _read_json_object(normalized.path_join(data_path(manifest, "agents")))
 	var progression := _read_json_object(normalized.path_join(data_path(manifest, "progression")))
+	var traits: Array = []
+	var traits_path := data_path(manifest, "traits")
+	if not traits_path.is_empty():
+		traits = _read_json_array(normalized.path_join(traits_path))
 
 	errors.append_array(_check_theme(theme, normalized.path_join(str(manifest["theme_path"]))))
 	errors.append_array(_check_progression(progression, locale))
@@ -105,7 +110,14 @@ static func validate_pack_root(root: String) -> Array[Dictionary]:
 	var role_result := PackContentChecks.check_roles(roles, locale)
 	errors.append_array(role_result["errors"])
 	var role_ids: Dictionary = role_result["ids"]
-	errors.append_array(PackContentChecks.check_agents(agents_document, role_ids, locale, manifest))
+	var trait_result := PackContentChecks.check_traits(
+		traits, role_ids, progression, manifest, locale
+	)
+	errors.append_array(trait_result["errors"])
+	var trait_ids: Dictionary = trait_result["ids"]
+	errors.append_array(
+		PackContentChecks.check_agents(agents_document, role_ids, locale, manifest, trait_ids)
+	)
 	errors.append_array(
 		PackContentChecks.check_tasks(tasks, role_ids, locale, progression, manifest)
 	)

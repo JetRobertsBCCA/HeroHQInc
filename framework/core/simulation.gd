@@ -164,7 +164,7 @@ static func evaluate_assignment(
 				},
 			)
 		assigned_roles[str(agent.get("role_id", ""))] = true
-		rating_total += AgentRules.rating_value(agent)
+		rating_total += TraitRules.rating_value(pack, agent, task)
 
 	var required_roles: Variant = task.get("required_role_ids", [])
 	if required_roles is Array:
@@ -202,7 +202,8 @@ static func assign_task(
 	pack: GamePack,
 	task_id: String,
 	agent_ids: Array,
-	utc_now: int
+	utc_now: int,
+	automatic: bool = false
 ) -> Dictionary:
 	var evaluation := evaluate_assignment(state, pack, task_id, agent_ids)
 	if not evaluation.get("ok", false):
@@ -214,7 +215,12 @@ static func assign_task(
 	state.extensions["simulation"] = simulation_state
 
 	var assignment_id := "task_%d" % sequence
-	var duration := maxi(int(roundf(float(task.get("base_seconds", 1)))), 1)
+	var assigned_agents: Array = []
+	for raw_id in agent_ids:
+		var assigned_id := str(raw_id)
+		if state.agents.has(assigned_id):
+			assigned_agents.append(state.agents[assigned_id])
+	var duration := TraitRules.duration_seconds(pack, task, assigned_agents)
 	var ends_utc := int(utc_now) + duration
 	var assignment := {
 		"id": assignment_id,
@@ -222,6 +228,7 @@ static func assign_task(
 		"agent_ids": agent_ids.duplicate(),
 		"started_utc": int(utc_now),
 		"ends_utc": ends_utc,
+		"automatic": automatic,
 	}
 	state.assignments[assignment_id] = assignment
 	for raw_id in agent_ids:
@@ -234,11 +241,13 @@ static func assign_task(
 		"details": "",
 		"assignment_id": assignment_id,
 		"ends_utc": ends_utc,
+		"automatic": automatic,
 	}
 
 
 ## Picks the strongest available set for `task_id`: required roles first, then
-## highest rating, then id. Returns [] when no legal set exists.
+## highest trait-adjusted rating for that operation, then id. Returns [] when
+## no legal set exists.
 static func auto_select_agents(
 	state: GameState,
 	pack: GamePack,
@@ -259,7 +268,7 @@ static func auto_select_agents(
 			continue
 		candidates.append({
 			"id": str(raw_id),
-			"rating": AgentRules.rating_value(agent),
+			"rating": TraitRules.rating_value(pack, agent, task),
 			"role_id": str(agent.get("role_id", "")),
 		})
 	candidates.sort_custom(_compare_candidates)
@@ -285,10 +294,16 @@ static func auto_select_agents(
 
 
 ## One-call deployment used by the UI: chooses agents, then schedules.
-static func deploy(state: GameState, pack: GamePack, task_id: String, utc_now: int) -> Dictionary:
+static func deploy(
+	state: GameState,
+	pack: GamePack,
+	task_id: String,
+	utc_now: int,
+	automatic: bool = false
+) -> Dictionary:
 	var agents := auto_select_agents(state, pack, task_id)
 	if (agents as Array).size() >= maxi(int(pack.task(task_id).get("required_agent_count", 1)), 1):
-		return assign_task(state, pack, task_id, agents, utc_now)
+		return assign_task(state, pack, task_id, agents, utc_now, automatic)
 	var relaxed := auto_select_agents(state, pack, task_id, true)
 	return evaluate_assignment(state, pack, task_id, relaxed)
 
@@ -324,7 +339,11 @@ static func train_agent(state: GameState, pack: GamePack, agent_id: String) -> D
 	var level_before := int(agent.get("level", 1))
 	state.resources[resource_id] = state.resource(resource_id) - float(cost)
 	var events := AgentRules.add_xp(
-		state, pack, agent_id, float(pack.training.get("xp_per_session", 0))
+		state,
+		pack,
+		agent_id,
+		float(pack.training.get("xp_per_session", 0)) \
+			* TraitRules.training_multiplier(pack, agent)
 	)
 	return {
 		"ok": true,
@@ -354,6 +373,13 @@ static func _complete_assignment(
 	var task_id := str(assignment.get("task_id", ""))
 	var task: Dictionary = pack.task(task_id)
 	var rewards := {}
+	var automatic := bool(assignment.get("automatic", false))
+	var agent_ids: Array = assignment.get("agent_ids", [])
+	var assigned_agents: Array = []
+	for raw_id in agent_ids:
+		var assigned_id := str(raw_id)
+		if state.agents.has(assigned_id):
+			assigned_agents.append(state.agents[assigned_id])
 
 	# Permanent multipliers stack: rebirth chips, then research ranks.
 	var payout := Prestige.multiplier(state, pack) * Research.reward_multiplier(state, pack)
@@ -362,7 +388,10 @@ static func _complete_assignment(
 	if declared is Dictionary:
 		for raw_id in (declared as Dictionary).keys():
 			var resource_id := str(raw_id)
-			var amount := float((declared as Dictionary)[raw_id]) * payout
+			var amount := float((declared as Dictionary)[raw_id]) * payout \
+				* TraitRules.task_reward_multiplier(
+					pack, assigned_agents, task, resource_id, automatic
+				)
 			if not is_finite(amount):
 				continue
 			rewards[resource_id] = amount
@@ -373,7 +402,6 @@ static func _complete_assignment(
 			if resource_id == run_resource:
 				state.add_run_earnings(amount)
 
-	var agent_ids: Array = assignment.get("agent_ids", [])
 	for raw_id in agent_ids:
 		var agent_id := str(raw_id)
 		if not state.agents.has(agent_id):
@@ -381,7 +409,9 @@ static func _complete_assignment(
 		var agent: Dictionary = state.agents[agent_id]
 		agent["activity"] = "available"
 		agent.erase("assignment_id")
-		events.append_array(AgentRules.add_xp(state, pack, agent_id, float(task.get("xp", 0))))
+		var task_xp := float(task.get("xp", 0)) \
+			* TraitRules.task_xp_multiplier(pack, agent, task)
+		events.append_array(AgentRules.add_xp(state, pack, agent_id, task_xp))
 
 	state.assignments.erase(assignment_id)
 	state.stats["tasks_completed"] = state.tasks_completed() + 1
@@ -394,6 +424,7 @@ static func _complete_assignment(
 		"agent_ids": agent_ids.duplicate(),
 		"rewards": rewards,
 		"ends_utc": ends_utc,
+		"automatic": automatic,
 	})
 	return events
 

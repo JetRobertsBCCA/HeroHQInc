@@ -88,9 +88,11 @@ func _restore_or_create_state() -> GameState:
 		# Without an agent no task can start, so rebuild it from pack data.
 		if state.agents.is_empty():
 			Simulation.seed_missing_starter_agents(state, _pack)
+		TraitRules.backfill_agents(state, _pack)
 		return state
 	var fresh := Simulation.new_state(_pack, STARTING_SEED, _clock.now_utc())
 	fresh.game_id = _profile_id
+	TraitRules.backfill_agents(fresh, _pack)
 	return fresh
 
 

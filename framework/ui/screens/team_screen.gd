@@ -287,7 +287,7 @@ func _squad_row(task_id: String) -> Control:
 		var record: Variant = _state.agents.get(agent_id, {})
 		if agent_id.is_empty() or not (record is Dictionary):
 			continue
-		rating_total += AgentRules.rating_value(record)
+		rating_total += TraitRules.rating_value(_pack, record, task)
 		chosen += 1
 
 	var required_rating := int(task.get("minimum_rating", 0))
@@ -375,7 +375,7 @@ func _slot_row(task_id: String, index: int, draft: Array[String]) -> Control:
 
 	var picker := Button.new()
 	picker.name = "Slot_%s_%d" % [task_id, index]
-	picker.text = _slot_text(draft[index])
+	picker.text = _slot_text(draft[index], _pack.task(task_id))
 	picker.custom_minimum_size = Vector2(0, SLOT_OPTION_HEIGHT)
 	picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	picker.pressed.connect(func() -> void: _toggle_picker(task_id, index))
@@ -387,9 +387,11 @@ func _slot_row(task_id: String, index: int, draft: Array[String]) -> Control:
 	return box
 
 
-## The inline chooser: Empty first, then every agent by rating. Taken or busy
-## agents stay visible but disabled, so the reason for each refusal is on screen.
+## The inline chooser: Empty first, then every agent by task-adjusted rating.
+## Taken or busy agents stay visible but disabled, so the reason for each refusal
+## is on screen.
 func _slot_choices(task_id: String, index: int, draft: Array[String]) -> Control:
+	var task := _pack.task(task_id)
 	var list := VBoxContainer.new()
 	list.add_theme_constant_override("separation", 4)
 	list.add_child(_choice_button(task_id, index, "", _pack.label("ui.slot_empty", "Empty")))
@@ -398,8 +400,8 @@ func _slot_choices(task_id: String, index: int, draft: Array[String]) -> Control
 	agent_ids.sort_custom(func(a: Variant, b: Variant) -> bool:
 		var agent_a: Dictionary = _state.agents[str(a)]
 		var agent_b: Dictionary = _state.agents[str(b)]
-		var rating_a := AgentRules.rating(agent_a)
-		var rating_b := AgentRules.rating(agent_b)
+		var rating_a := int(roundf(TraitRules.rating_value(_pack, agent_a, task)))
+		var rating_b := int(roundf(TraitRules.rating_value(_pack, agent_b, task)))
 		if rating_a != rating_b:
 			return rating_a > rating_b
 		return str(a) < str(b)
@@ -410,7 +412,8 @@ func _slot_choices(task_id: String, index: int, draft: Array[String]) -> Control
 		var agent: Dictionary = _state.agents[agent_id]
 		var taken := draft.has(agent_id) and draft.find(agent_id) != index
 		var busy := not AgentRules.is_available(agent)
-		var text := "%s · %d" % [_pack.agent_name(agent_id, agent), AgentRules.rating(agent)]
+		var rating := int(roundf(TraitRules.rating_value(_pack, agent, task)))
+		var text := "%s · %d" % [_pack.agent_name(agent_id, agent), rating]
 		if busy:
 			text += " · %s" % _pack.label("ui.slot_busy", "deployed")
 		var choice := _choice_button(task_id, index, agent_id, text)
@@ -430,12 +433,13 @@ func _choice_button(task_id: String, index: int, agent_id: String, text: String)
 	return choice
 
 
-func _slot_text(agent_id: String) -> String:
+func _slot_text(agent_id: String, task: Dictionary) -> String:
 	var record: Variant = _state.agents.get(agent_id, null)
 	if not (record is Dictionary):
 		return _pack.label("ui.slot_empty", "Empty")
 	var agent: Dictionary = record
-	var text := "%s · %d" % [_pack.agent_name(agent_id, agent), AgentRules.rating(agent)]
+	var rating := int(roundf(TraitRules.rating_value(_pack, agent, task)))
+	var text := "%s · %d" % [_pack.agent_name(agent_id, agent), rating]
 	if not AgentRules.is_available(agent):
 		text += " · %s" % _pack.label("ui.slot_busy", "deployed")
 	return text

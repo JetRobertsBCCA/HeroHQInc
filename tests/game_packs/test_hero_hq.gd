@@ -32,11 +32,18 @@ func test_pack_declares_the_locked_mvp_shell() -> void:
 	assert_eq(pack.declared_resources(), ["credits", "intel"], "declared resources match the spec")
 	assert_eq(pack.navigation.size(), 5, "five primary tabs are declared")
 	assert_eq(pack.roles.size(), 5, "five hero classes are declared")
+	assert_eq(pack.traits.size(), 10, "ten hero traits are declared")
+	assert_eq(pack.trait_ids().size(), 10, "trait ids are unique")
 	assert_eq(pack.missions.size(), 15, "the task ladder has fifteen steps")
 	assert_true(pack.missions.has("s_alley"), "the starter task exists")
 	assert_true(pack.missions.has("s_siege"), "the highest-gated task exists")
 	assert_true(pack.missions.has("s_siegebreak"), "the squad finale exists")
 	assert_true(pack.starter_agents.has("hero_volt"), "the starter hero comes from pack data")
+	assert_eq(
+		str(pack.starter_agents["hero_volt"].get("trait_id", "")),
+		"tactical_mind",
+		"the starter hero declares a trait",
+	)
 	assert_eq(int(pack.focus.get("max", 0)), 5, "Focus capacity comes from pack data")
 	assert_eq(int(pack.focus.get("regen_seconds", 0)), 60, "Focus regeneration is pack data")
 	assert_eq(pack.max_offline_seconds, 28800.0, "the offline allowance is eight hours")

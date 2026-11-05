@@ -361,7 +361,7 @@ static func resume_patrol(state: GameState, pack: GamePack, utc_now: int) -> Dic
 	if not bool(current.get("ok", false)):
 		return current
 	var deployed := Simulation.assign_task(
-		state, pack, str(current["task_id"]), [str(current["agent_id"])], utc_now
+		state, pack, str(current["task_id"]), [str(current["agent_id"])], utc_now, true
 	)
 	if not bool(deployed.get("ok", false)):
 		return patrol_status(state, pack)
@@ -530,14 +530,14 @@ static func resume(state: GameState, pack: GamePack, utc_now: int) -> Dictionary
 
 	var remembered := str(current.get("task_id", ""))
 	if not bool(current.get("squad", false)):
-		var deployed := Simulation.deploy(state, pack, remembered, utc_now)
+		var deployed := Simulation.deploy(state, pack, remembered, utc_now, true)
 		if not bool(deployed.get("ok", false)):
 			# Keep the rule: eligibility can change again after training or a
 			# roster change, and the player needs to see why it did not start.
 			return status(state, pack)
 		return deployed
 	var lineup_ids: Array = current.get("agent_ids", [])
-	return Simulation.assign_task(state, pack, remembered, lineup_ids, utc_now)
+	return Simulation.assign_task(state, pack, remembered, lineup_ids, utc_now, true)
 
 
 ## Mirror of `Simulation.deploy` selection without scheduling anything, so the

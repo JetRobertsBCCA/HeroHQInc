@@ -47,7 +47,8 @@ static func check_agents(
 	document: Dictionary,
 	role_ids: Dictionary,
 	locale: Dictionary,
-	manifest: Dictionary = {}
+	manifest: Dictionary = {},
+	trait_ids: Dictionary = {}
 ) -> Array[Dictionary]:
 	var errors: Array[Dictionary] = []
 	var starting: Variant = document.get("starting_agents", [])
@@ -75,6 +76,12 @@ static func check_agents(
 			errors.append(PackValidator.error("invalid_value", "agents", "Agent '%s' level must be >= 1." % id))
 		if float(agent.get("xp", 0)) < 0.0:
 			errors.append(PackValidator.error("invalid_value", "agents", "Agent '%s' xp must be >= 0." % id))
+		var trait_id := str(agent.get("trait_id", ""))
+		if not trait_id.is_empty() and not trait_ids.has(trait_id):
+			errors.append(PackValidator.error(
+				"dangling_reference", "agents",
+				"Agent '%s' references unknown trait '%s'." % [id, trait_id],
+			))
 		errors.append_array(PackValidator.check_locale_key(agent, "agents", locale, "agent %s" % id))
 		var attributes: Variant = agent.get("attributes", null)
 		if attributes is Dictionary:
@@ -87,6 +94,106 @@ static func check_agents(
 					))
 	errors.append_array(check_rules(document, manifest))
 	return errors
+
+
+## Optional trait catalogue. Every declared modifier must be one the shared
+## simulation understands, and its filters must reference real content.
+static func check_traits(
+	records: Array,
+	role_ids: Dictionary,
+	progression: Dictionary,
+	manifest: Dictionary,
+	locale: Dictionary
+) -> Dictionary:
+	var errors: Array[Dictionary] = []
+	var ids: Dictionary = {}
+	if records.is_empty():
+		return {"ids": ids, "errors": errors}
+	var category_ids := PackValidator.id_set(progression.get("categories", []))
+	var resource_ids := PackValidator.string_set(manifest.get("resources", []))
+	for record in records:
+		if not (record is Dictionary):
+			errors.append(PackValidator.error("invalid_value", "traits", "Trait entries must be objects."))
+			continue
+		var entry: Dictionary = record
+		var id := str(entry.get("id", ""))
+		if not PackValidator.matches(id, PackValidator.ID_PATTERN):
+			errors.append(PackValidator.error("invalid_id", "traits", "Trait id '%s' is invalid." % id))
+		if ids.has(id):
+			errors.append(PackValidator.error("duplicate_id", "traits", "Duplicate trait id '%s'." % id))
+		ids[id] = true
+		errors.append_array(PackValidator.check_locale_key(entry, "traits", locale, "trait %s" % id))
+		var description_key := str(entry.get("description_key", ""))
+		if description_key.is_empty() or not locale.has(description_key):
+			errors.append(PackValidator.error(
+				"missing_locale_key", "traits",
+				"Trait '%s' description_key '%s' is missing from the locale." % [id, description_key],
+			))
+		var modifiers: Variant = entry.get("modifiers", null)
+		if not (modifiers is Array) or (modifiers as Array).is_empty():
+			errors.append(PackValidator.error(
+				"invalid_value", "traits", "Trait '%s' must declare at least one modifier." % id,
+			))
+			continue
+		for raw in modifiers:
+			if not (raw is Dictionary):
+				errors.append(PackValidator.error(
+					"invalid_value", "traits", "Trait '%s' modifiers must be objects." % id,
+				))
+				continue
+			var modifier: Dictionary = raw
+			var modifier_type := str(modifier.get("type", ""))
+			if not TraitRules.SUPPORTED_TYPES.has(modifier_type):
+				errors.append(PackValidator.error(
+					"invalid_value", "traits",
+					"Trait '%s' modifier type '%s' is not supported." % [id, modifier_type],
+				))
+			var value := float(modifier.get("value", 0.0))
+			if not is_finite(value):
+				errors.append(PackValidator.error(
+					"invalid_value", "traits", "Trait '%s' modifier value must be finite." % id,
+				))
+			elif modifier_type == TraitRules.DURATION:
+				if value > 0.0 or value < -0.9:
+					errors.append(PackValidator.error(
+						"invalid_value", "traits",
+						"Trait '%s' duration modifier must be between -0.9 and 0." % id,
+					))
+			elif value < 0.0 or value > 5.0:
+				errors.append(PackValidator.error(
+					"invalid_value", "traits",
+					"Trait '%s' modifier value must be between 0 and 5." % id,
+				))
+			var task_kind := str(modifier.get("task_kind", ""))
+			if modifier.has("task_kind") and not PackValidator.SUPPORTED_TASK_KINDS.has(task_kind):
+				errors.append(PackValidator.error(
+					"invalid_value", "traits",
+					"Trait '%s' modifier task_kind '%s' is invalid." % [id, task_kind],
+				))
+			var category_id := str(modifier.get("category_id", ""))
+			if modifier.has("category_id") and not category_ids.has(category_id):
+				errors.append(PackValidator.error(
+					"dangling_reference", "traits",
+					"Trait '%s' references unknown category '%s'." % [id, category_id],
+				))
+			var role_id := str(modifier.get("role_id", ""))
+			if modifier.has("role_id") and not role_ids.has(role_id):
+				errors.append(PackValidator.error(
+					"dangling_reference", "traits",
+					"Trait '%s' references unknown role '%s'." % [id, role_id],
+				))
+			var resource_id := str(modifier.get("resource_id", ""))
+			if modifier.has("resource_id") and not resource_ids.has(resource_id):
+				errors.append(PackValidator.error(
+					"dangling_reference", "traits",
+					"Trait '%s' references undeclared resource '%s'." % [id, resource_id],
+				))
+			if modifier.has("automatic") and not (modifier["automatic"] is bool):
+				errors.append(PackValidator.error(
+					"invalid_value", "traits",
+					"Trait '%s' automatic filter must be a boolean." % id,
+				))
+	return {"ids": ids, "errors": errors}
 
 
 ## Optional tuning blocks. Absent blocks keep their framework defaults, so a

@@ -3,6 +3,80 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.21 — Hero traits (2026-11-05)
+
+Status: development verification complete headlessly and with 360×640 windowed
+captures; no formal reviewer playtest or Android pass was started.
+
+### What changed
+
+- Added `games/hero_hq/data/traits.json` with the ten launch traits: Quick
+  Learner, Night Watch, Tactical Mind, Sprinter, Investigator, Crowd Favorite,
+  Team Player, Unbreakable, Arcane Talent and Efficient. Each declares a name,
+  description and additive modifiers.
+- Every hero now carries one trait. Volt starts with Tactical Mind; recruits
+  derive a stable trait from their deterministic pool slot. The roster row and
+  both offer cards show the trait name and exact effect before hiring.
+- Added the game-neutral `TraitRules` modifier pipeline. It supports training
+  XP, task duration, Credits/Intel rewards, task XP and rating modifiers, with
+  optional solo/squad, category, role, resource and automatic-work filters.
+  Trait effects are additive within their named category.
+- Trait modifiers now feed the existing training, assignment, completion and
+  rating paths. Efficient applies only to patrol/auto-repeat assignments; the
+  automatic marker is stored on the assignment and carried through settlement.
+- Automatic lineup selection now ranks candidates by the trait-adjusted rating
+  for the exact operation. Teams uses the same rating for its suggested draft,
+  slot list and average, so the preview matches the deployment check.
+- Older saves without a trait are backfilled from the starter record or a
+  stable agent id, so existing rosters remain playable without a schema
+  migration. Content version is now 7; save schema stays 1.
+- `tooling/heroes_viewport_capture.gd` now requires a visible trait on both
+  offer cards and still checks that the pair fits the first 360×640 viewport.
+
+### Route result
+
+`tooling/playthrough_demo.gd` exits **0** with **PASS in-game playthrough**.
+
+- Started at 50 Credits / 0 Intel / 1 hero with no grant. Tech was hired from
+  its visible 50-Credit card at 0:40; the refreshed pair exposed Support at 52
+  and Vanguard at 54, and both were hired at 2:00.
+- City / Command Level 3 arrived at **6:10**: 47 dispatches, 47 completed
+  operations, **1,650** lifetime Credits, **1,469** current Credits, 4 agents
+  and 4 roles.
+- Tech reached rating 110 in 5 sessions. Signal Pursuit paid Intel, research
+  rank 1 spent 15 Intel (53 -> 38), and the starter reached level 7 after 40
+  sessions. Lifetime earnings were **4,585** Credits, with 443 current.
+- Both rebirth taps banked chips; the four-agent roster, starter level reset,
+  cleared assignments and saved `s_raid` lineup survived the reload.
+- The separate deterministic route now reaches City at **5:40** and National
+  at **9:20**: 57 dispatches, 76 completed operations, 3,796 lifetime Credits,
+  5 agents in 5 roles and one completed squad. The first Joint Raid is at 7:50.
+- Auto Patrol is still affordable at 2:10 and first runs at 2:40. A nine-hour
+  return settles 1,439 patrol starts and 1,442 completions for 26,160 Credits,
+  and the second settlement pays nothing.
+
+### Checks
+
+- Godot headless suite: **171/171 passed** (eleven trait cases plus the
+  validator negative case). The new selection case proves a 115-base Support
+  with Unbreakable is chosen over a 120-base Support for a 125-rating rescue
+  operation, and that the resulting lineup deploys.
+- `tooling/validate_packs.gd`: `OK hero_hq`, 1 pack checked, 0 invalid.
+- `tooling/heroes_viewport_capture.gd`: `HEROES_CAPTURE_OK tag=traits` at
+  360×640. Fresh cards were 157/174 px tall and midgame cards 157/157 px; both
+  hire buttons were 48 px. Both fresh and midgame captures were inspected.
+- `git diff --check`: clean.
+- No formal reviewer playtest was started.
+
+### Limits
+
+- Team mastery and a separate defense-rating system are still absent. Team
+  Player therefore grants squad task XP, and Unbreakable grants Rescue
+  operation rating; those mappings are intentional for the systems this slice
+  has, not codex-complete implementations.
+- Specializations, legendaries, contracts and the full 22-upgrade catalogue
+  remain future work. The Android device pass was not repeated for traits.
+
 ## M1.20.1 — Real-UI playthrough earns the City gate (2026-11-05)
 
 Status: development verification complete headlessly; no formal reviewer
@@ -57,6 +131,9 @@ failed 10 checks because the fresh UI path was still Command Level 1.
 - `tooling/validate_packs.gd`: `OK hero_hq`, 1 pack checked, 0 invalid.
 - `git diff --check`: clean.
 - No formal reviewer playtest was started.
+
+These are the pre-traits measurements and 159-test total; M1.21 records the
+current route and suite result.
 
 ## M1.20 — Two visible recruitment offers (2026-11-05)
 

@@ -24,7 +24,8 @@ func _base_files(game_id: String) -> Dictionary:
 				"roles": "data/roles.json",
 				"missions": "data/missions.json",
 				"progression": "data/progression.json",
-				"agents": "data/agents.json"
+				"agents": "data/agents.json",
+				"traits": "data/traits.json"
 			},
 			"locale_path": "locale/en.json",
 			"theme_path": "ui/theme.json"
@@ -57,12 +58,21 @@ func _base_files(game_id: String) -> Dictionary:
 					"id": "agent_one",
 					"name_key": "agents.agent_one",
 					"role_id": "role_a",
+					"trait_id": "trait_a",
 					"level": 1,
 					"xp": 0,
 					"attributes": {"power": 3}
 				}
 			]
 		},
+		"data/traits.json": [
+			{
+				"id": "trait_a",
+				"name_key": "traits.trait_a",
+				"description_key": "traits.trait_a.desc",
+				"modifiers": [{"type": "training_xp", "value": 0.1}]
+			}
+		],
 		"locale/en.json": {
 			"game.title": "Fixture Pack",
 			"tabs.main": "Main",
@@ -72,7 +82,9 @@ func _base_files(game_id: String) -> Dictionary:
 			"categories.category_one": "Category One",
 			"command.level_1": "Level One",
 			"resources.tokens": "Tokens",
-			"agents.agent_one": "Agent One"
+			"agents.agent_one": "Agent One",
+			"traits.trait_a": "Trait A",
+			"traits.trait_a.desc": "A test trait."
 		},
 		"ui/theme.json": theme
 	}
@@ -207,6 +219,20 @@ func test_invalid_mechanics_are_reported() -> void:
 		"an unimplemented mechanic is refused rather than silently ignored"
 	)
 	_remove_fixture("fixture_mechanics")
+
+
+func test_unknown_trait_modifier_is_reported() -> void:
+	var files := _base_files("fixture_trait_bad")
+	((files["data/traits.json"] as Array)[0] as Dictionary)["modifiers"] = [
+		{"type": "telepathy", "value": 0.1},
+	]
+	var root := _write_fixture("fixture_trait_bad", files)
+	assert_has_error_code(
+		PackValidator.validate_pack_root(root),
+		"invalid_value",
+		"an unimplemented trait modifier is refused"
+	)
+	_remove_fixture("fixture_trait_bad")
 
 
 func test_loader_refuses_an_invalid_pack() -> void:

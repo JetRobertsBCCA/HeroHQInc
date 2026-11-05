@@ -40,6 +40,8 @@ var focus: Dictionary = {}
 ## Recruit pool: {resource_id, named_count, base_cost, cost_growth, given_names,
 ## call_signs, filler_name_format, tiers: [...]}. Empty means no recruitment.
 var recruit_pool: Dictionary = {}
+## id -> trait definition. Empty means the pack does not use traits.
+var traits: Dictionary = {}
 ## [{id, label_key}] bottom navigation, in display order.
 var navigation: Array = []
 
@@ -94,6 +96,19 @@ func role(role_id: String) -> Dictionary:
 	if value is Dictionary:
 		return value
 	return {}
+
+
+func trait_data(trait_id: String) -> Dictionary:
+	var value: Variant = traits.get(trait_id, null)
+	if value is Dictionary:
+		return value
+	return {}
+
+
+func trait_ids() -> Array:
+	var ids: Array = traits.keys()
+	ids.sort()
+	return ids
 
 
 func stage_label(stage_id: String) -> String:

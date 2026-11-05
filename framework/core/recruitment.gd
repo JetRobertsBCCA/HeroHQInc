@@ -120,6 +120,11 @@ static func candidate(pack: GamePack, index: int) -> Dictionary:
 			attributes[attribute] = base + (rng % (spread + 1))
 		else:
 			attributes[attribute] = base
+	var trait_id := ""
+	var trait_ids := pack.trait_ids()
+	if not trait_ids.is_empty():
+		rng = _next(rng)
+		trait_id = str(trait_ids[rng % trait_ids.size()])
 
 	return {
 		"index": slot,
@@ -130,6 +135,7 @@ static func candidate(pack: GamePack, index: int) -> Dictionary:
 		"tier_multiplier": maxf(float(tier.get("cost_multiplier", 1.0)), 0.0),
 		"attributes": attributes,
 		"rating": int(roundf(AgentRules.rating_value({"attributes": attributes}))),
+		"trait_id": trait_id,
 		"named": slot < named_count(pack),
 	}
 
@@ -294,6 +300,7 @@ static func _buy_slot(state: GameState, pack: GamePack, index: int) -> Dictionar
 		"name_key": "",
 		"role_id": rules["role_id"],
 		"tier_id": rules["tier_id"],
+		"trait_id": rules.get("trait_id", ""),
 		"level": 1,
 		"xp": 0,
 		"activity": "available",
@@ -310,6 +317,7 @@ static func _buy_slot(state: GameState, pack: GamePack, index: int) -> Dictionar
 		"resource_id": resource,
 		"rating": rules["rating"],
 		"tier_id": rules["tier_id"],
+		"trait_id": rules.get("trait_id", ""),
 	}
 
 

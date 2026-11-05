@@ -16,6 +16,7 @@
 			"id": "hero_volt",
 			"name_key": "agents.hero_volt",
 			"role_id": "striker",
+			"trait_id": "tactical_mind",
 			"level": 1,
 			"xp": 0,
 			"activity": "available",
