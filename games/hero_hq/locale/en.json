@@ -45,6 +45,7 @@
 	"command.level_1": "Command Level 1",
 	"command.level_2": "Command Level 2",
 	"command.level_3": "Command Level 3",
+	"command.level_4": "Command Level 4",
 
 	"resources.credits": "Credits",
 	"resources.intel": "Intel",
@@ -58,6 +59,8 @@
 	"ui.command_req_tasks": "Complete %d operations",
 	"ui.command_req_earn": "Earn %s lifetime %s",
 	"ui.command_req_role_any": "Own a %s hero",
+	"ui.command_req_roles": "Own heroes in %d roles",
+	"ui.command_req_squads": "Complete %d squad operations",
 	"ui.command_req_upgrades": "Buy %d upgrades",
 	"ui.stage_locked": "%s requires Command Level %d (current %d).",
 
@@ -85,6 +88,7 @@
 	"ui.objective_train": "Train an operative to level 2 in Heroes.",
 	"ui.objective_recruit": "Recruit a second operative in Heroes.",
 	"ui.objective_city": "Reach Command Level 3 to unlock Citywide Defense.",
+	"ui.objective_national": "Reach Command Level 4 for National Response.",
 	"ui.objective_research": "Buy your first Research rank in Upgrades.",
 	"ui.objective_rebirth": "Reach level %d and %d lifetime Credits, then Rebirth in Upgrades.",
 	"ui.objective_done": "Starter goals complete — push the ladder, bank chips, repeat.",

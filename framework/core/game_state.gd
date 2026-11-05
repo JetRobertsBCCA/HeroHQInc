@@ -77,6 +77,12 @@ func tasks_completed() -> int:
 	return int(stats.get("tasks_completed", 0))
 
 
+## Completed operations whose task declares `kind: "squad"`. Older saves do
+## not carry the counter and correctly start at zero without a schema change.
+func squad_tasks_completed() -> int:
+	return int(stats.get("squad_tasks_completed", 0))
+
+
 func prestige_chips() -> int:
 	return int(prestige.get("chips", 0))
 

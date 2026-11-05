@@ -1,9 +1,10 @@
 extends SceneTree
-## Captures the Missions board at 360x640 in three states and checks the parts
+## Captures the Missions board at 360x640 in four states and checks the parts
 ## that must survive a compact portrait layout:
-##   fresh  - no live work, the first ready operation and the locked ladder
-##   active - a running operation with a live progress bar and countdown
-##   locked - a scrolled view of blocked operations with their reasons
+##   fresh   - no live work, the first ready operation and the locked ladder
+##   active  - a running operation with a live progress bar and countdown
+##   locked  - a scrolled view of blocked operations with their reasons
+##   national - level 3 scrolled to the National Response Command Level lock
 ##
 ## The player's save is backed up and restored. Exit code 1 on any failed
 ## layout assertion so this is a check, not just a screenshot generator.
@@ -52,6 +53,11 @@ func _run() -> void:
 	var locked := Simulation.new_state(_pack, 1, now)
 	await _capture_state("locked", locked, now, true)
 
+	# National: a level-3 roster scrolled to the first National operation, so the
+	# full Command Level 4 reason is visible on a 360px-wide device.
+	var national := _national_state(now)
+	await _capture_state("national", national, now, true, "s_blackout")
+
 	_app.queue_free()
 	await process_frame
 	await process_frame
@@ -62,6 +68,28 @@ func _run() -> void:
 		return
 	print("MISSION_CAPTURE_OK tag=%s" % _tag)
 	quit(0)
+
+
+func _national_state(now: int) -> GameState:
+	var state := Simulation.new_state(_pack, 1, now)
+	state.stats["tasks_completed"] = 12
+	state.stats["earned"] = {"credits": 1500.0}
+	state.agents["test_support"] = _capture_agent("test_support", "support")
+	state.agents["test_tech"] = _capture_agent("test_tech", "tech")
+	state.agents["test_reserve"] = _capture_agent("test_reserve", "striker")
+	return state
+
+
+func _capture_agent(agent_id: String, role_id: String) -> Dictionary:
+	return {
+		"id": agent_id,
+		"name": agent_id.capitalize(),
+		"role_id": role_id,
+		"level": 1,
+		"xp": 0,
+		"activity": "available",
+		"attributes": {"power": 20, "speed": 20, "skill": 20},
+	}
 
 
 func _active_state(now: int) -> GameState:
@@ -84,7 +112,8 @@ func _capture_state(
 	state_name: String,
 	state: GameState,
 	now: int,
-	scroll_locked: bool
+	scroll_locked: bool,
+	focus_task_id: String = ""
 ) -> void:
 	_app.set("_state", state)
 	var shell := _app.get("_shell") as ScreenShell
@@ -105,17 +134,23 @@ func _capture_state(
 		var locked_list := board.find_child("LockedList", true, false) as VBoxContainer
 		var locked_heading := board.find_child("LockedHeading", true, false) as Control
 		_check(locked_list != null and locked_list.get_child_count() > 0, "locked state has rows")
-		if locked_heading != null:
-			var target := maxi(int(locked_heading.position.y) - 6, 0)
-			scroll.scroll_vertical = target
-			await process_frame
-			scroll.scroll_vertical = target
-			print("LOCKED_SCROLL target=%d actual=%d heading_y=%.1f max=%.1f" % [
-				target,
-				scroll.scroll_vertical,
-				locked_heading.position.y,
-				scroll.get_v_scroll_bar().max_value,
-			])
+		var target := 0
+		if not focus_task_id.is_empty() and locked_list != null:
+			var focus_card := board.find_child("Task_%s" % focus_task_id, true, false) as Control
+			_check(focus_card != null, "%s has a focused locked card" % focus_task_id)
+			if focus_card != null:
+				target = maxi(int(locked_list.position.y + focus_card.position.y) - 6, 0)
+		elif locked_heading != null:
+			target = maxi(int(locked_heading.position.y) - 6, 0)
+		scroll.scroll_vertical = target
+		await process_frame
+		scroll.scroll_vertical = target
+		print("LOCKED_SCROLL state=%s target=%d actual=%d max=%.1f" % [
+			state_name,
+			target,
+			scroll.scroll_vertical,
+			scroll.get_v_scroll_bar().max_value,
+		])
 		await process_frame
 		await process_frame
 
@@ -178,14 +213,30 @@ func _capture_state(
 		ready_button.size.y if ready_button != null else 0.0,
 	])
 
+	if state_name == "national":
+		for task_id in ["s_blackout", "s_siege", "s_breach", "s_siegebreak"]:
+			_check(
+				board.blocked_reason(task_id).contains("National Response"),
+				"%s names National Response" % task_id,
+			)
+			_check(
+				board.blocked_reason(task_id).contains("Command Level 4"),
+				"%s names Command Level 4" % task_id,
+			)
+			_check(board.deploy_button(task_id).disabled, "%s is disabled" % task_id)
+
 	if scroll_locked:
 		_check(scroll != null and scroll.scroll_vertical > 0, "locked state is scrolled")
 		var locked_list := board.find_child("LockedList", true, false) as VBoxContainer
-		if locked_list != null and locked_list.get_child_count() > 0:
-			var locked_card := locked_list.get_child(0) as Control
+		var locked_card: Control = null
+		if not focus_task_id.is_empty():
+			locked_card = board.find_child("Task_%s" % focus_task_id, true, false) as Control
+		elif locked_list != null and locked_list.get_child_count() > 0:
+			locked_card = locked_list.get_child(0) as Control
+		if locked_card != null:
 			_check(
 				locked_card.get_global_rect().intersects(content_rect),
-				"the first locked operation is visible",
+				"the focused locked operation is visible",
 			)
 			var locked_status := locked_card.find_child("Status_*", true, false) as Label
 			_check(

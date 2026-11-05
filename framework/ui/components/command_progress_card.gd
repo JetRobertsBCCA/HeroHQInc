@@ -6,8 +6,8 @@ extends PanelContainer
 ## level, so it stays correct for fresh profiles and for saves written before
 ## milestones existed.
 
-const FONT_SIZE := 12
-const HEADING_SIZE := 14
+const FONT_SIZE := 11
+const HEADING_SIZE := 13
 
 var _pack: GamePack
 var _state: GameState
@@ -88,7 +88,7 @@ func _ensure_built() -> void:
 		return
 	UILayout.fill(self)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 2)
+	column.add_theme_constant_override("separation", 0)
 	add_child(column)
 
 	var top := HBoxContainer.new()

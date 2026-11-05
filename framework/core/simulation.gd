@@ -385,6 +385,8 @@ static func _complete_assignment(
 
 	state.assignments.erase(assignment_id)
 	state.stats["tasks_completed"] = state.tasks_completed() + 1
+	if str(task.get("kind", "")) == "squad":
+		state.stats["squad_tasks_completed"] = state.squad_tasks_completed() + 1
 	events.push_front({
 		"type": "task_completed",
 		"assignment_id": assignment_id,

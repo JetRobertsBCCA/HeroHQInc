@@ -33,8 +33,20 @@ func _level_three_state(pack: GamePack) -> GameState:
 	state.stats["tasks_completed"] = 12
 	state.stats["earned"] = {"credits": 1500.0}
 	state.agents["test_support"] = _agent("test_support", "support")
+	state.agents["test_support"]["level"] = 2
 	state.agents["test_tech"] = _agent("test_tech", "tech")
 	state.agents["test_reserve"] = _agent("test_reserve", "striker")
+	return state
+
+
+func _level_four_state(pack: GamePack) -> GameState:
+	var state := _level_three_state(pack)
+	state.agents["test_vanguard"] = _agent("test_vanguard", "vanguard")
+	state.stats["tasks_completed"] = 40
+	state.stats["earned"] = {"credits": 3500.0}
+	state.stats["squad_tasks_completed"] = 1
+	for agent_id in state.agents.keys():
+		state.agents[agent_id]["attributes"] = {"power": 40, "speed": 40, "skill": 40}
 	return state
 
 
@@ -114,13 +126,26 @@ func test_existing_level_three_save_restores_the_city_unlock() -> void:
 	if state == null or card == null:
 		_cleanup(app)
 		return
-	assert_eq(state.pack_content_version, 4, "the app stamping the new content version needs no migration")
+	assert_eq(state.pack_content_version, 5, "the app stamping the new content version needs no migration")
 	assert_eq(state.tasks_completed(), 12, "the existing lifetime counter is preserved")
 	assert_true(state.earned_total("credits") >= 1500.0, "existing lifetime earnings are preserved")
 	assert_eq(card.heading_text(), "Command Level 3", "the card derives the existing level")
-	assert_eq(card.next_text(), "", "there is no next implemented milestone")
-	assert_true(card.unlock_text().contains("Citywide Defense"), "the card reports the completed City unlock")
-	assert_true(card.future_text().contains("later"), "the card distinguishes later milestones")
+	assert_true(card.next_text().contains("Command Level 4"), "the card names the National milestone")
+	assert_true(card.unlock_text().contains("National Response"), "the card names the National unlock")
+	assert_true(card.future_text().is_empty(), "there is no unimplemented milestone ahead")
+	var rows := card.requirement_rows()
+	assert_eq(rows.size(), 5, "the National milestone lists all five requirements")
+	assert_eq(
+		str(rows[0].get("progress", "")),
+		"4 / 5",
+		"the card reports the live National roster progress",
+	)
+	var objective: Dictionary = app.call("_next_objective")
+	assert_eq(int(objective.get("step", 0)), 5, "National is the next guidance step")
+	assert_true(
+		str(objective.get("text", "")).contains("National Response"),
+		"HQ points at the National Response milestone",
+	)
 
 	var shell: ScreenShell = app.get("_shell")
 	shell.select_tab("missions")
@@ -129,4 +154,45 @@ func test_existing_level_three_save_restores_the_city_unlock() -> void:
 	if board != null:
 		assert_false(board.deploy_button("s_drone").disabled, "the City operation is now deployable")
 		assert_eq(board.blocked_reason("s_drone"), "", "the stage lock reason is gone")
+		for task_id in ["s_blackout", "s_siege", "s_breach", "s_siegebreak"]:
+			assert_true(board.deploy_button(task_id).disabled, "%s is disabled at level 3" % task_id)
+			var expected := CommandProgression.stage_lock_text(pack, {
+				"stage_id": "national",
+				"required_command_level": 4,
+				"current_command_level": 3,
+			})
+			assert_eq(board.blocked_reason(task_id), expected, "%s states the National reason" % task_id)
+			assert_true(board.blocked_reason(task_id).contains("National Response"), "%s names National Response" % task_id)
+	_cleanup(app)
+
+
+func test_level_four_save_unlocks_all_national_operations() -> void:
+	var pack := _pack()
+	var app := _boot(_level_four_state(pack))
+	assert_true(app != null, "the app boots for the Level 4 case")
+	if app == null:
+		return
+
+	var state: GameState = app.get("_state")
+	var card: CommandProgressCard = app.get("_command_card")
+	assert_true(state != null, "the Level 4 save restores")
+	assert_true(card != null, "HQ builds the Level 4 card")
+	if state == null or card == null:
+		_cleanup(app)
+		return
+	assert_eq(CommandProgression.current_level(state, pack), 4, "the saved totals derive Level 4")
+	assert_true(CommandProgression.stage_unlocked(state, pack, "national"), "National is open")
+	assert_eq(card.heading_text(), "Command Level 4", "the card shows the reached level")
+	assert_eq(card.next_text(), "", "there is no next implemented milestone")
+	assert_true(card.unlock_text().contains("National Response"), "the card reports the National unlock")
+	assert_true(card.future_text().contains("later"), "later milestones stay explicit")
+
+	var shell: ScreenShell = app.get("_shell")
+	shell.select_tab("missions")
+	var board: TaskBoard = app.get("_task_board")
+	assert_true(board != null, "Missions rebuilds for Level 4")
+	if board != null:
+		for task_id in ["s_blackout", "s_siege", "s_breach", "s_siegebreak"]:
+			assert_false(board.deploy_button(task_id).disabled, "%s is deployable at level 4" % task_id)
+			assert_eq(board.blocked_reason(task_id), "", "%s has no stage reason" % task_id)
 	_cleanup(app)

@@ -3,15 +3,17 @@ extends RefCounted
 ## Explicit command milestones and stage access.
 ##
 ## Levels are derived from aggregate saved state: roster size, tasks completed,
-## lifetime earnings and owned roles. No command-level field is written to the
-## save, so a profile from an earlier content build evaluates immediately
-## without a migration. Levels are contiguous: a later level cannot count until
-## every earlier level is satisfied.
+## lifetime earnings, owned roles and completed squad operations. No command-
+## level field is written to the save, so a profile from an earlier content build
+## evaluates immediately without a migration. Levels are contiguous: a later
+## level cannot count until every earlier level is satisfied.
 
 const TYPE_OWN_AGENTS := "own_agents"
 const TYPE_COMPLETE_TASKS := "complete_tasks"
 const TYPE_EARN_RESOURCE_LIFETIME := "earn_resource_lifetime"
 const TYPE_OWN_ROLE_ANY := "own_role_any"
+const TYPE_OWN_DISTINCT_ROLES := "own_distinct_roles"
+const TYPE_COMPLETE_SQUAD_TASKS := "complete_squad_tasks"
 const TYPE_BUY_UPGRADE := "buy_upgrade"
 
 const SUPPORTED_REQUIREMENT_TYPES: Array[String] = [
@@ -19,6 +21,8 @@ const SUPPORTED_REQUIREMENT_TYPES: Array[String] = [
 	TYPE_COMPLETE_TASKS,
 	TYPE_EARN_RESOURCE_LIFETIME,
 	TYPE_OWN_ROLE_ANY,
+	TYPE_OWN_DISTINCT_ROLES,
+	TYPE_COMPLETE_SQUAD_TASKS,
 	TYPE_BUY_UPGRADE,
 ]
 
@@ -107,6 +111,10 @@ static func requirement_met(
 		TYPE_OWN_ROLE_ANY:
 			var roles := _string_array(requirement.get("role_ids", []))
 			return _count_roles(state, roles) >= maxi(int(requirement.get("count", 1)), 1)
+		TYPE_OWN_DISTINCT_ROLES:
+			return _count_distinct_roles(state) >= maxi(int(requirement.get("count", 1)), 1)
+		TYPE_COMPLETE_SQUAD_TASKS:
+			return state.squad_tasks_completed() >= maxi(int(requirement.get("count", 1)), 1)
 		TYPE_BUY_UPGRADE:
 			return _purchased_upgrades(state) >= maxi(int(requirement.get("count", 0)), 0)
 	return false
@@ -163,6 +171,14 @@ static func _requirement_row(
 			var names := _role_names(pack, roles)
 			var separator := " %s " % pack.label("ui.command_or", "or")
 			label = pack.label("ui.command_req_role_any", "Own a %s agent") % separator.join(names)
+		TYPE_OWN_DISTINCT_ROLES:
+			target = float(maxi(int(requirement.get("count", 1)), 1))
+			current = float(_count_distinct_roles(state))
+			label = pack.label("ui.command_req_roles", "Own agents in %d roles") % int(target)
+		TYPE_COMPLETE_SQUAD_TASKS:
+			target = float(maxi(int(requirement.get("count", 1)), 1))
+			current = float(state.squad_tasks_completed())
+			label = pack.label("ui.command_req_squads", "Complete %d squad operations") % int(target)
 		TYPE_BUY_UPGRADE:
 			target = float(maxi(int(requirement.get("count", 0)), 0))
 			current = float(_purchased_upgrades(state))
@@ -251,6 +267,16 @@ static func _count_roles(state: GameState, role_ids: Array[String]) -> int:
 			if role_ids.has(role_id):
 				count += 1
 	return count
+
+
+static func _count_distinct_roles(state: GameState) -> int:
+	var roles: Dictionary = {}
+	for raw in state.agents.values():
+		if raw is Dictionary:
+			var role_id := str((raw as Dictionary).get("role_id", ""))
+			if not role_id.is_empty():
+				roles[role_id] = true
+	return roles.size()
 
 
 static func _purchased_upgrades(state: GameState) -> int:

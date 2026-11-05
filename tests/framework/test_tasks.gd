@@ -63,6 +63,7 @@ func test_completion_pays_once_and_frees_agents() -> void:
 	assert_eq(state.assignments.size(), 0, "the assignment is cleared")
 	assert_eq(str(state.agents["hero_volt"]["activity"]), "available", "the agent is freed")
 	assert_eq(state.tasks_completed(), 1, "the lifetime counter advances")
+	assert_eq(state.squad_tasks_completed(), 0, "a solo operation is not a squad completion")
 	assert_eq(state.earned_total("credits"), 18.0, "lifetime earnings are tracked")
 
 
@@ -133,6 +134,41 @@ func test_training_spends_resources_and_levels_up() -> void:
 		35,
 		"the next session costs more than the first",
 	)
+
+
+func test_squad_completion_increments_the_squad_counter() -> void:
+	var pack := _pack()
+	var state := _state(pack, 1000)
+	state.agents["test_striker"] = {
+		"id": "test_striker",
+		"name": "Test Striker",
+		"role_id": "striker",
+		"level": 1,
+		"xp": 0,
+		"activity": "available",
+		"attributes": {"power": 9, "speed": 9, "skill": 9},
+	}
+	state.agents["test_support"] = {
+		"id": "test_support",
+		"name": "Test Support",
+		"role_id": "support",
+		"level": 1,
+		"xp": 0,
+		"activity": "available",
+		"attributes": {"power": 9, "speed": 9, "skill": 9},
+	}
+	var assigned := Simulation.assign_task(
+		state, pack, "s_raid", ["test_striker", "test_support"], 1000
+	)
+	assert_true(assigned.get("ok", false), "the squad operation starts")
+	Simulation.simulate_delta(state, 100.0, pack)
+	assert_eq(state.tasks_completed(), 1, "the squad completion also increments the total")
+	assert_eq(state.squad_tasks_completed(), 1, "the squad-specific counter advances")
+
+	Simulation.assign_task(state, pack, "s_alley", ["hero_volt"], 1100)
+	Simulation.simulate_delta(state, 20.0, pack)
+	assert_eq(state.tasks_completed(), 2, "the solo operation increments the total")
+	assert_eq(state.squad_tasks_completed(), 1, "the solo operation leaves the squad counter alone")
 
 
 func test_training_requires_resources() -> void:

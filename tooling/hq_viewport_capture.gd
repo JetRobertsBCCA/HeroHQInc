@@ -1,5 +1,6 @@
 extends SceneTree
-## Reproducible 360x640 captures and geometry evidence for the HQ first viewport.
+## Reproducible 360x640 captures and geometry evidence for the HQ first viewport,
+## including the Level 3 card's five Level 4 requirements.
 ##
 ## Run windowed:
 ##   godot --path . --resolution 360x640 -s res://tooling/hq_viewport_capture.gd
@@ -32,6 +33,7 @@ func _run() -> void:
 	var pack := GamePackLoader.load_pack(PACK_ID)["pack"] as GamePack
 	var scenarios := [
 		{"id": "fresh", "state": _fresh_state(pack), "reduced": false},
+		{"id": "command_level_three", "state": _command_level_three_state(pack), "reduced": false},
 		{"id": "active_solo", "state": _active_state(pack, false, false), "reduced": false},
 		{"id": "active_squad", "state": _active_state(pack, true, false), "reduced": false},
 		{"id": "reduced_motion", "state": _active_state(pack, true, true), "reduced": true},
@@ -190,17 +192,34 @@ func _fresh_state(pack: GamePack) -> GameState:
 	return Simulation.new_state(pack, 31, PACK_NOW)
 
 
+## Level 3 shows the five live Level 4 requirements and the National unlock in
+## the same first viewport as the existing HQ card.
+func _command_level_three_state(pack: GamePack) -> GameState:
+	var state := Simulation.new_state(pack, 33, PACK_NOW)
+	state.stats["tasks_completed"] = 12
+	state.stats["earned"] = {"credits": 1500.0}
+	state.agents["test_support"] = _agent("test_support", "support", 2)
+	state.agents["test_tech"] = _agent("test_tech", "tech", 1)
+	state.agents["test_reserve"] = _agent("test_reserve", "striker", 1)
+	return state
+
+
 func _active_state(pack: GamePack, squad: bool, reduced: bool) -> GameState:
 	var state := Simulation.new_state(pack, 32, PACK_NOW)
 	state.resources["credits"] = 4415.0
 	state.resources["intel"] = 9.0
-	state.stats["tasks_completed"] = 12 if squad else 3
+	state.stats["tasks_completed"] = 40 if squad else 3
 	if squad:
-		state.stats["earned"] = {"credits": 1500.0}
+		state.stats["earned"] = {"credits": 3500.0}
+		state.stats["squad_tasks_completed"] = 1
 	state.agents["hero_volt"]["attributes"] = {"power": 10, "speed": 10, "skill": 10}
 	state.agents["shot_striker"] = _agent("shot_striker", "striker", 4)
 	state.agents["shot_support"] = _agent("shot_support", "support", 4)
 	state.agents["shot_tech"] = _agent("shot_tech", "tech", 3)
+	if squad:
+		# The two-live-row network stress case is a Level 4 agency: its compact
+		# completed card must still fit with both live rows and the objective.
+		state.agents["shot_vanguard"] = _agent("shot_vanguard", "vanguard", 3)
 	if reduced:
 		state.extensions["hero_hq.ui"] = {"reduced_motion": true}
 

@@ -56,6 +56,8 @@ const SUPPORTED_REQUIREMENT_TYPES: Array[String] = [
 	"earn_resource_lifetime",
 	"buy_upgrade",
 	"own_role_any",
+	"own_distinct_roles",
+	"complete_squad_tasks",
 ]
 
 const FOCUS_NUMERIC_KEYS: Array[String] = [

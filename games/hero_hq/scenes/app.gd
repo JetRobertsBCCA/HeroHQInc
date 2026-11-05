@@ -466,15 +466,21 @@ func _next_objective() -> Dictionary:
 			"done": false,
 			"text": _pack.label("ui.objective_city", "Reach Command Level 3 to unlock Citywide Defense."),
 		}
+	if CommandProgression.current_level(_state, _pack) < CommandProgression.stage_unlock_level(_pack, "national"):
+		return {
+			"step": 5,
+			"done": false,
+			"text": _pack.label("ui.objective_national", "Reach Command Level 4 for National Response."),
+		}
 	if not first_branch.is_empty() and Research.rank(_state, first_branch) == 0:
 		return {
-			"step": 4,
+			"step": 6,
 			"done": false,
 			"text": _pack.label("ui.objective_research", "Buy your first Research rank in Upgrades."),
 		}
 	if _state.prestige_chips() == 0:
 		return {
-			"step": 5,
+			"step": 6,
 			"done": false,
 			"text": _pack.label(
 				"ui.objective_rebirth",
@@ -482,7 +488,7 @@ func _next_objective() -> Dictionary:
 			) % [Prestige.min_level(_pack), int(Prestige.threshold_amount(_pack))],
 		}
 	return {
-		"step": 5,
+		"step": 6,
 		"done": true,
 		"text": _pack.label(
 			"ui.objective_done", "Starter goals complete — push the ladder, bank chips, repeat."
@@ -513,7 +519,7 @@ func _build_objective_card() -> Control:
 	if bool(objective.get("done", false)):
 		progress.text = _pack.label("ui.objective_complete", "Complete")
 	else:
-		progress.text = "%s %d / 5" % [
+		progress.text = "%s %d / 6" % [
 			_pack.label("ui.objective_step", "Step"), int(objective.get("step", 1)),
 		]
 	progress.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT

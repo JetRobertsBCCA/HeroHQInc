@@ -221,14 +221,24 @@ at 4:40 in-game, using 33 dispatches across Alley Patrol, Break-In Response and
 Stakeout; that route found no stall or repetition worth tuning, so the approved
 requirements and Street rewards are unchanged.
 
+Level 4 asks for 5 agents, 40 completed operations, 3,500 lifetime Credits,
+heroes in 4 roles and one completed squad operation, then unlocks National
+Response. It derives from existing saved totals, needs no Intel or currently
+locked National job, and gates all four National operations through the same
+stage rule in direct deploys, Missions, Teams and auto-repeat. A no-grant route
+reaches City at 5:20 and National at 8:40 in-game: 3:20 later, 64 dispatches,
+60 operations, 3,686 lifetime Credits, 5 agents in 4 roles and one completed
+squad, with a longest completion gap of 40 seconds and no deadlock. A National
+operation already running on an older save still settles normally.
+
 City now has a role-shaped second tier: Convoy Ambush is the Support's
 high-rating solo, while Joint Raid is the better use of a Support and Striker
 together. A fresh-save model reaches City at 4:40, starts the first squad at
 5:55 and completes it at 7:35, and clears all eight City firsts by 10:35 without
 an idle stall. The 15-operation ladder and Street gate are unchanged.
 
-Not implemented yet: command milestones beyond City, National Response gating,
-configured Auto Patrol and team autopilot with their wait reasons, team mastery,
+Not implemented yet: command milestones beyond National Response, configured
+Auto Patrol and team autopilot with their wait reasons, team mastery,
 synergies and named team slots, traits, specializations, legendaries, agency contracts, and
 an offline earnings report. Monetization (M6) and physical-device Android testing
 remain out of scope for this pass. The debug build runs on an emulator; release

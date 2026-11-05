@@ -3,6 +3,78 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.18 — National Response Command Level (2026-11-05)
+
+Status: development verification complete headlessly and with 360×640 windowed
+captures; no formal reviewer playtest or new Android device pass was started.
+
+### What was wrong
+
+Command Level 3 was the last implemented milestone, so HQ showed no next step
+after City and National Response had no command gate at all. All four National
+operations were visible as ordinary locked rows, distinguished only by rating
+and role, and there was no saved measure of a completed squad operation.
+
+### What changed
+
+- `CommandProgression` derives two new requirement types from existing state:
+  `own_distinct_roles` counts distinct roster roles, and `complete_squad_tasks`
+  reads a new settlement statistic. No command-level field or save migration was
+  added.
+- Level 4 requires 5 agents, 40 completed operations, 3,500 lifetime Credits,
+  heroes in 4 roles, and 1 completed squad operation. It intentionally requires
+  neither Intel nor a currently locked National job. Older saves without the
+  squad counter default it to zero and can satisfy it by completing a squad.
+- `Simulation._complete_assignment` increments `squad_tasks_completed` only when
+  the task declares `kind: "squad"`. The same settlement rule counts a squad
+  that was already in flight when this build loaded.
+- National Response now declares `unlock_command_level: 4`. The existing stage
+  check in `Simulation.evaluate_assignment` therefore gates direct deploys,
+  Missions, Teams and auto-repeat from one rule, including all four National
+  operations. Settlement still does not re-check the stage, so legacy in-flight
+  National work finishes and pays normally.
+- HQ shows `Command Level 4`, five live requirement rows and
+  `Unlocks: National Response`; the objective card points at National before
+  Research. The card uses 11px rows / 13px heading and fits the idle 360×640
+  first viewport. Pack content version is 5; save schema remains 1.
+- `tooling/missions_viewport_capture.gd` adds a level-3 National view, scrolls
+  to Blackout Response, and checks all four localized Command Level 4 reasons.
+  `tooling/hq_viewport_capture.gd` adds the Level 3 five-row milestone card.
+- `tooling/national_route.gd` models the ordinary no-grant route with the real
+  simulation and reports dispatch count, elapsed time, completion gaps and
+  repeated operations.
+
+### Route check
+
+A deterministic fresh save recruited, trained and dispatched through the real
+simulation with no grants. It reached City at 5:20 with 37 dispatches, 36
+operations, 1,572 lifetime Credits, 4 agents and 3 roles. National Response
+unlocked at 8:40: 3:20 later, 27 additional dispatches (64 total), 60 completed
+operations, 3,686 lifetime Credits, 5 agents in 4 roles and 1 completed squad.
+The longest completion gap was 0:40 and no deadlock occurred. The route earned
+11 Intel but bought no Research, confirming Intel is not a prerequisite. The
+earlier 18-operation / 3-role draft was already satisfied on City entry; raising
+it to 40 / 4 made both requirements real without changing the 15-operation
+ladder or any reward.
+
+### Checks
+
+- Godot headless suite: **144/144 passed** (six new cases). Coverage includes
+  fresh and older saves, the five Level 4 rows, all four National refusals in the
+  simulation and auto-repeat, the level-3 HQ card/objective, the level-4 unlock,
+  UI lock reasons for all four operations, in-flight legacy National settlement,
+  and the squad counter's solo/squad behavior.
+- `tooling/validate_packs.gd`: `OK hero_hq`, 1 pack checked, 0 invalid.
+- `tooling/national_route.gd`: exit **0**, `ROUTE_OK`.
+- 360×640 windowed captures: HQ Level 3 ends at y=559 inside the content edge at
+y=560 with all five rows and `Unlocks: National Response`; the National Missions
+capture scrolls to y=1382 and shows the full
+`National Response requires Command Level 4 (current 3).` reason. All four
+National rows report the same gate. The two-live-row HQ stress capture uses a
+completed Level 4 card so both network rows and the milestone card fit; the
+five-row Level 3 card is verified in the idle capture.
+- No formal reviewer playtest was started.
+
 ## M1.17 — Mission operation board (2026-11-05)
 
 Status: complete; windowed 360×640 fresh/active/locked captures and headless checks.
