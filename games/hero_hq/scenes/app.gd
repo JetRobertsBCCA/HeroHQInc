@@ -639,8 +639,12 @@ func _network_feed(now: int) -> Dictionary:
 		var raw_agents: Variant = assignment.get("agent_ids", [])
 		if raw_agents is Array:
 			agent_ids = raw_agents
+		var assigned_agents: Array = []
 		for raw_agent in agent_ids:
-			active_agents[str(raw_agent)] = true
+			var assigned_id := str(raw_agent)
+			active_agents[assigned_id] = true
+			if _state.agents.has(assigned_id):
+				assigned_agents.append(_state.agents[assigned_id])
 		var started := int(assignment.get("started_utc", now))
 		var ends := int(assignment.get("ends_utc", now))
 		var total := maxi(ends - started, 1)
@@ -654,6 +658,12 @@ func _network_feed(now: int) -> Dictionary:
 			"squad": agent_ids.size() > 1,
 			"agent_count": agent_ids.size(),
 			"crew": _network_crew(agent_ids),
+			"stage_id": str(task.get("stage_id", "")),
+			"payout": _network_projected_rewards(
+				task,
+				assigned_agents,
+				bool(assignment.get("automatic", false)),
+			),
 			"progress": progress,
 			"remaining": TextFormat.duration(float(remaining)),
 		})
@@ -671,7 +681,39 @@ func _network_feed(now: int) -> Dictionary:
 		"activities": activities,
 		"idle_count": idle,
 		"completion": _network_completion_feed(),
+		"destinations": _network_destinations(),
 	}
+
+
+func _network_destinations() -> Array:
+	var current := CommandProgression.current_level(_state, _pack)
+	var result: Array = []
+	for stage_id in _pack.stage_ids():
+		var required := CommandProgression.stage_unlock_level(_pack, str(stage_id))
+		result.append({
+			"id": str(stage_id),
+			"label": _pack.stage_label(str(stage_id)),
+			"unlocked": current >= required,
+			"unlock_level": required,
+		})
+	return result
+
+
+func _network_projected_rewards(task: Dictionary, agents: Array, automatic: bool) -> String:
+	var declared: Variant = task.get("rewards", null)
+	if not (declared is Dictionary):
+		return ""
+	var payout := Prestige.multiplier(_state, _pack) * Research.reward_multiplier(_state, _pack)
+	var rewards := {}
+	for raw_id in (declared as Dictionary).keys():
+		var resource_id := str(raw_id)
+		var amount := float((declared as Dictionary)[raw_id]) * payout \
+			* TraitRules.task_reward_multiplier(
+				_pack, agents, task, resource_id, automatic
+			)
+		if is_finite(amount):
+			rewards[resource_id] = amount
+	return TextFormat.rewards(_pack, rewards)
 
 
 func _network_crew(agent_ids: Array) -> String:
@@ -706,6 +748,7 @@ func _queue_network_completion(entry: Dictionary) -> void:
 	_network_completion = {
 		"id": "%s:%s" % [str(entry.get("assignment_id", "")), str(entry.get("ends_utc", ""))],
 		"title": _pack.label(str(task.get("name_key", "")), task_id),
+		"stage_id": str(task.get("stage_id", "")),
 		"reward": reward_text,
 	}
 	_network_completion_until_msec = Time.get_ticks_msec() + NETWORK_COMPLETION_MS

@@ -3,6 +3,65 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.22 — Portrait Operations Network schematic (2026-11-05)
+
+Status: development verification complete headlessly and with 360×640 windowed
+captures; no formal reviewer playtest or Android pass was started.
+
+### What changed
+
+- Reworked `HeroNetworkPanel` from an anonymous satellite plot into a portrait
+  agency map. A larger HQ hub sits at the bottom, with three destination
+  stations above it: Street, City and National each have a distinct icon,
+  command-gate label and lock treatment. The next locked stage is called out in
+  warning colour (`NEXT · LV 3`), so the bottleneck is visible on the map as
+  well as in the objective card.
+- Running assignments now use their real task `stage_id` and are drawn as
+  routes from HQ to the matching station. Each route carries a numbered
+  operation/crew/progress badge, a progress arc at the station and the
+  projected payout. The normal header now reads `N READY MISSIONS`, with the
+  Missions cue in accent colour, making the manual next action obvious without
+  adding another touch target.
+- Small bright dispatch dots follow the routes with short fading trails.
+  Completion reuses the same route in reverse and shows the actual `COMPLETE`
+  payout at the destination; the header keeps the paid reward. Reduced motion
+  freezes the trail while preserving every label and value.
+- The feed now carries `stage_id`, projected `payout` (prestige, research and
+  trait multipliers included), destination unlock metadata and the completion
+  stage. The panel remains draw-only, bounded and mouse-transparent. Its five-
+  hertz timer only runs while visible with live work or a completion pulse and
+  full motion enabled.
+- The compact map is 96 px high inside the existing HQ card. Active rows stay
+  56 px high; the existing motion toggle remains 44 px and the bottom navigation
+  remains 48 px. `tooling/hq_viewport_capture.gd` now also checks three
+  destinations and a non-empty stage/payout for every active route.
+
+### Checks
+
+- Godot headless suite: **171/171 passed**. The network test now asserts the
+  real stage and projected payout on each route, all three destinations and
+  their labels/command gates.
+- `tooling/validate_packs.gd`: `OK hero_hq`, 1 pack checked, 0 invalid.
+- `tooling/hq_viewport_capture.gd -- --tag=network_final` at 360×640: fresh and
+  Command Level 3 `network_bottom=346`, objective bottom 415, command bottoms
+  505/553; active solo network bottom 358, objective 448, command 538; active
+  squad and reduced motion network bottom 414, objective 483, command 557. The
+  content slot ends at 560, both live rows fit, motion is 44 px and the tab is
+  48 px. All captures show `destinations=3`; active route stages are `street`
+  and `street,city`. Fresh, active solo, active squad, reduced-motion and
+  Command Level 3 captures were inspected.
+- `tooling/network_capture.gd`: working frame moved 21 sampled pixels between
+  frames; reduced motion stopped the timer (`timer_running=false`); completion
+  showed `Alley Patrol COMPLETE`, then idle cleared the pulse. The completion
+  capture shows the return route and `COMPLETE +18 Credits` at the Street
+  station.
+- `tooling/playthrough_demo.gd`: **PASS in-game playthrough** with no grant;
+  City at 6:10 in 47 dispatches and 1,650 lifetime / 1,469 current Credits.
+  The separate deterministic route still reaches City at 5:40 and National at
+  9:20 with 57 dispatches, 76 completions and 3,796 lifetime Credits.
+- `git diff --check`: clean.
+- No formal reviewer playtest was started.
+
 ## M1.21 — Hero traits (2026-11-05)
 
 Status: development verification complete headlessly and with 360×640 windowed

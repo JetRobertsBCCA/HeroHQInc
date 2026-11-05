@@ -85,6 +85,23 @@ func test_network_feed_lists_solo_and_squad_with_live_progress() -> void:
 	assert_true(bool(squad.get("squad", false)), "the squad operation is marked as a squad")
 	assert_eq(int(squad.get("agent_count", 0)), 2, "the squad row carries its crew size")
 	assert_true(str(squad.get("crew", "")).contains("+1"), "the squad row summarizes its second hero")
+	assert_eq(str(solo.get("stage_id", "")), "street", "the solo route carries its real destination")
+	assert_true(
+		str(solo.get("payout", "")).contains("18 Credits"),
+		"the route carries its projected live payout",
+	)
+	assert_eq(panel.stage_count(), 3, "the map exposes all three command destinations")
+	var street := panel.stage_info(0)
+	assert_eq(str(street.get("id", "")), "street", "the first destination is the street")
+	assert_eq(str(street.get("label", "")), "Street Level", "the street cue is named")
+	assert_true(bool(street.get("unlocked", false)), "the street is open on the crew state")
+	var city := panel.stage_info(1)
+	assert_eq(str(city.get("id", "")), "city", "the second destination is the city")
+	assert_eq(str(city.get("label", "")), "Citywide Defense", "the city cue is named")
+	assert_eq(int(city.get("unlock_level", 0)), 3, "the city cue carries its command gate")
+	var national := panel.stage_info(2)
+	assert_eq(str(national.get("id", "")), "national", "the third destination is national")
+	assert_eq(str(national.get("label", "")), "National Response", "the national cue is named")
 
 	var before := float(solo.get("progress", -1.0))
 	var clock := app.get("_clock") as Clock.Manual

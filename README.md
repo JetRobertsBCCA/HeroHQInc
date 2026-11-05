@@ -6,7 +6,7 @@ coordinated citywide agency while the player builds, trains and automates teams.
 
 - **Engine:** Godot **4.7.2** stable, GDScript, `gl_compatibility` renderer
 - **Target:** Android first, portrait, 360×640 logical canvas with safe-area insets
-- **Status:** **v1 core loop complete** (M1.12) + **M1.13 Operations Network visual/readability pass** + **M1.21 hero traits** — fresh save to rebirth with manual squad lineups, Focus, traits and offline settlement, played end to end; debug APK verified on an Android 35 emulator (see [docs/ANDROID.md](docs/ANDROID.md)). Focus, the live network and the trait cards are headless/capture-verified but the trait pass has not had a new device pass; remaining MVP gaps are listed below.
+- **Status:** **v1 core loop complete** (M1.12) + **M1.21 hero traits** + **M1.22 portrait Operations Network schematic** — fresh save to rebirth with manual squad lineups, Focus, traits and offline settlement, played end to end; debug APK verified on an Android 35 emulator (see [docs/ANDROID.md](docs/ANDROID.md)). Focus, the live network and the trait cards are headless/capture-verified but the network and trait passes have not had a new device pass; remaining MVP gaps are listed below.
 - **Design source of truth:** `HERO_HQ_MASTER_CODEX.md` (see *Design document* below)
 
 ## Run it
@@ -77,7 +77,7 @@ and Teams explains a blocked rule by slot, job, rating or role, offers Retry for
 an immediate recheck, and clears when the rule starts. Use
 `-gpu host`; the software renderer cannot link Godot's canvas shader and shows a
 black screen.
-The M1.12 Focus card and the M1.13 operations-network visuals have not yet
+The M1.12 Focus card and the M1.22 operations-network visuals have not yet
 been included in an emulator or phone pass.
 
 ## Play the loop
@@ -108,14 +108,17 @@ with 50 Credits, which is enough for one training session and no more.
    with ×1.03 growth per standing hero.
 4. A deployed operation moves to **Live operations** with a countdown and an
    in-place progress bar. When it reaches zero it pays out, the heroes are freed
-   and the result is logged on the HQ tab. HQ's **Operations Network** gives
-   every running solo job
-   or squad a numbered map node, animated crew tokens, a progress arc and a
-   text row with time left and percent. A brief `COMPLETE` line and restrained
-   HQ pulse report the paid reward. The saved `Reduce motion: on` control stops
-   the five-hertz pulse and redraw loop while leaving the progress text live.
-   The two live rows use 15 px operation/time text and 14 px crew, percent and
-   status text; the map header and motion toggle are 14 px.
+   and the result is logged on the HQ tab. HQ's **Operations Network** now draws
+   a portrait agency map: a bottom HQ hub, Street/City/National destination
+   stations with lock/next labels, and active routes labelled with the numbered
+   operation, crew, percent and projected payout. Small bright dispatch/return
+   dots and short trails follow those routes; completion substitutes the actual
+   `COMPLETE` payout at the destination. The `MISSIONS` header cue stays visible
+   for the next manual action. A brief `COMPLETE` line and restrained HQ pulse
+   report the paid reward. The saved `Reduce motion: on` control stops the
+   five-hertz pulse and redraw loop while leaving the progress text live. The
+   two live rows use 15 px operation/time text and 14 px crew, percent and status
+   text; the map header and motion toggle are 14 px.
 5. **Focus** on HQ shows the 5/5 bank, the next regeneration and one pulse button
    per running operation. Each button prints the exact projected saving before
    spending — 15% of remaining time, capped at 30 seconds solo and 90 seconds

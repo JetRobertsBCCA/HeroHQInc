@@ -120,32 +120,45 @@ func _report_layout(app: Control, scenario_id: String) -> bool:
 			+ HeroNetworkPanel.HEADER_HEIGHT + HeroNetworkPanel.DIAGRAM_HEIGHT \
 			+ HeroNetworkPanel.GAP_BEFORE_ROWS + HeroNetworkPanel.ROW_HEIGHT
 		second_row_bottom = first_row_bottom + HeroNetworkPanel.ROW_HEIGHT
+	var route_stages: Array[String] = []
+	var routes_ok := network != null
+	if network != null:
+		for index in network.activity_count():
+			var info := network.activity_info(index)
+			var stage_id := str(info.get("stage_id", ""))
+			if stage_id.is_empty() or str(info.get("payout", "")).is_empty():
+				routes_ok = false
+			route_stages.append(stage_id)
+	var destinations_ok := network != null and network.stage_count() >= 3
 	print((
 		"LAYOUT %s viewport=%s content_bottom=%.1f network_top=%.1f network_bottom=%.1f "
 		+ "first_row_bottom=%.1f first_row_fits=%s second_row_fits=%s "
 		+ "objective_h=%.1f objective_bottom=%.1f objective_fits=%s "
 		+ "command_h=%.1f command_bottom=%.1f command_fits=%s "
-		+ "motion_h=%.1f tab_h=%.1f activities=%d reduced=%s"
+		+ "motion_h=%.1f tab_h=%.1f activities=%d destinations=%d route_stages=%s "
+		+ "reduced=%s"
 	) % [
-			scenario_id,
-			str(root.get_visible_rect().size),
-			content_bottom,
-			network_top,
-			network_bottom,
-			first_row_bottom,
-			str(first_row_bottom > 0.0 and first_row_bottom <= content_bottom),
-			str(second_row_bottom > 0.0 and second_row_bottom <= content_bottom),
-			objective.get_global_rect().size.y if objective != null else -1.0,
-			objective_bottom,
-			str(objective != null and objective_bottom <= content_bottom),
-			command.get_global_rect().size.y if command != null else -1.0,
-			command_bottom,
-			str(command != null and command_bottom <= content_bottom),
-			motion.size.y if motion != null else -1.0,
-			tab.size.y if tab != null else -1.0,
-			network.activity_count() if network != null else -1,
-			str(network.is_reduced_motion()) if network != null else "missing",
-		]
+		scenario_id,
+		str(root.get_visible_rect().size),
+		content_bottom,
+		network_top,
+		network_bottom,
+		first_row_bottom,
+		str(first_row_bottom > 0.0 and first_row_bottom <= content_bottom),
+		str(second_row_bottom > 0.0 and second_row_bottom <= content_bottom),
+		objective.get_global_rect().size.y if objective != null else -1.0,
+		objective_bottom,
+		str(objective != null and objective_bottom <= content_bottom),
+		command.get_global_rect().size.y if command != null else -1.0,
+		command_bottom,
+		str(command != null and command_bottom <= content_bottom),
+		motion.size.y if motion != null else -1.0,
+		tab.size.y if tab != null else -1.0,
+		network.activity_count() if network != null else -1,
+		network.stage_count() if network != null else -1,
+		",".join(route_stages),
+		str(network.is_reduced_motion()) if network != null else "missing",
+	]
 	)
 	var first_ok := network != null and (
 		network.activity_count() == 0 or first_row_bottom <= content_bottom
@@ -158,16 +171,18 @@ func _report_layout(app: Control, scenario_id: String) -> bool:
 	var touch_ok := motion != null and motion.size.y >= 44.0 \
 		and tab != null and tab.size.y >= 48.0
 	var layout_ok := content != null and network != null and first_ok and second_ok \
-		and objective_ok and command_ok and touch_ok
+		and objective_ok and command_ok and touch_ok and destinations_ok and routes_ok
 	if not layout_ok:
 		print(
-			"LAYOUT CHECK FAILED %s first=%s second=%s objective=%s command=%s touch=%s" % [
+			"LAYOUT CHECK FAILED %s first=%s second=%s objective=%s command=%s touch=%s destinations=%s routes=%s" % [
 				scenario_id,
 				str(first_ok),
 				str(second_ok),
 				str(objective_ok),
 				str(command_ok),
 				str(touch_ok),
+				str(destinations_ok),
+				str(routes_ok),
 			]
 		)
 	return layout_ok
