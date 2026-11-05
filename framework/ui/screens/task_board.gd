@@ -20,6 +20,7 @@ var _available_list: VBoxContainer
 ## assignment_id -> countdown Label, refreshed every tick without rebuilding.
 var _countdowns: Dictionary = {}
 var _deploy_buttons: Dictionary = {}
+var _reasons: Dictionary = {}
 var _auto_repeat: AutoRepeatBanner
 var _utc_now: int = 0
 
@@ -39,6 +40,13 @@ func deploy_button(task_id: String) -> Button:
 	return null
 
 
+func blocked_reason(task_id: String) -> String:
+	var label: Variant = _reasons.get(task_id, null)
+	if label is Label:
+		return (label as Label).text
+	return ""
+
+
 func auto_repeat_banner() -> AutoRepeatBanner:
 	return _auto_repeat
 
@@ -53,6 +61,7 @@ func refresh(pack: GamePack, state: GameState, utc_now: int) -> void:
 	_clear(_available_list)
 	_countdowns.clear()
 	_deploy_buttons.clear()
+	_reasons.clear()
 
 	var active_ids: Array = state.assignments.keys()
 	active_ids.sort()
@@ -187,17 +196,20 @@ func _task_row(task_id: String) -> Control:
 	if not evaluation.get("ok", false):
 		var code := str(evaluation.get("code", ""))
 		var reason := Label.new()
-		reason.text = _blocked_text(code, task)
+		reason.text = _blocked_text(code, task, evaluation)
 		reason.add_theme_font_size_override("font_size", 11)
 		reason.add_theme_color_override("font_color", ThemeTokens.color(_pack, "warning"))
 		reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		column.add_child(reason)
+		_reasons[task_id] = reason
 	return panel
 
 
 ## Locale text for a block code. A count shortfall states how many agents the
 ## operation needs, so "1 of 2" does not read as "every agent is busy".
-func _blocked_text(code: String, task: Dictionary) -> String:
+func _blocked_text(code: String, task: Dictionary, evaluation: Dictionary) -> String:
+	if code == Simulation.ERROR_STAGE_LOCKED:
+		return CommandProgression.stage_lock_text(_pack, evaluation)
 	if code == Simulation.ERROR_AGENT_COUNT:
 		return _pack.label("ui.blocked_agent_count", "Needs %d available agents") % maxi(
 			int(task.get("required_agent_count", 1)), 1

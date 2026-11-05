@@ -11,6 +11,7 @@ extends RefCounted
 ## identifier, or touch platform SDKs.
 
 const ERROR_UNKNOWN_TASK := "unknown_task"
+const ERROR_STAGE_LOCKED := "stage_locked"
 const ERROR_AGENT_COUNT := "agent_count"
 const ERROR_UNKNOWN_AGENT := "unknown_agent"
 const ERROR_AGENT_BUSY := "agent_busy"
@@ -109,6 +110,23 @@ static func evaluate_assignment(
 	if not pack.missions.has(task_id):
 		return _problem(ERROR_UNKNOWN_TASK, "Task '%s' is not part of this pack." % task_id)
 	var task: Dictionary = pack.missions[task_id]
+	var stage_id := str(task.get("stage_id", ""))
+	var stage_details := CommandProgression.stage_lock_details(state, pack, stage_id)
+	if bool(stage_details.get("locked", false)):
+		return {
+			"ok": false,
+			"code": ERROR_STAGE_LOCKED,
+			"details": "Stage '%s' requires Command Level %d; current level is %d." % [
+				stage_id,
+				int(stage_details.get("required_command_level", 1)),
+				int(stage_details.get("current_command_level", 1)),
+			],
+			"rating": 0.0,
+			"required_rating": 0.0,
+			"stage_id": stage_id,
+			"required_command_level": int(stage_details.get("required_command_level", 1)),
+			"current_command_level": int(stage_details.get("current_command_level", 1)),
+		}
 	var required_count := maxi(int(task.get("required_agent_count", 1)), 1)
 	if agent_ids.size() != required_count:
 		return _problem(

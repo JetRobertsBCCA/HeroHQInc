@@ -30,7 +30,8 @@ func _crew_state(pack: GamePack) -> GameState:
 	var state := Simulation.new_state(pack, 11, NOW)
 	state.game_id = PROFILE_ID
 	state.resources["credits"] = 500.0
-	state.stats["tasks_completed"] = 0
+	state.stats["tasks_completed"] = 12
+	state.stats["earned"] = {"credits": 1500.0}
 	state.agents["hero_volt"]["attributes"] = {"power": 10, "speed": 10, "skill": 10}
 	state.agents["test_striker"] = _agent("test_striker", "striker")
 	state.agents["test_support"] = _agent("test_support", "support")

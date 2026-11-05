@@ -6,7 +6,7 @@ const AUTOMATION_BRANCH := "ops_automation"
 
 
 func _pack() -> GamePack:
-	return GamePackLoader.load_pack(PACK_ID)["pack"]
+	return without_stage_gates(GamePackLoader.load_pack(PACK_ID)["pack"])
 
 
 func _state(pack: GamePack) -> GameState:

@@ -135,6 +135,9 @@ static func status(state: GameState, pack: GamePack) -> Dictionary:
 		"role_id",
 		"duplicate",
 		"details",
+		"stage_id",
+		"required_command_level",
+		"current_command_level",
 	]:
 		if evaluation.has(key):
 			result[key] = evaluation[key]

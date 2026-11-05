@@ -8,7 +8,7 @@ const TASK_ID := "s_raid"
 
 
 func _pack() -> GamePack:
-	return GamePackLoader.load_pack(PACK_ID)["pack"]
+	return without_stage_gates(GamePackLoader.load_pack(PACK_ID)["pack"])
 
 
 func _state(pack: GamePack) -> GameState:

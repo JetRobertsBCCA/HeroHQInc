@@ -33,6 +33,7 @@ var _timer: Timer
 var _settled_seconds: float = 0.0
 var _events_log: Array[String] = []
 var _task_board: TaskBoard
+var _command_card: CommandProgressCard
 var _roster: RosterScreen
 var _teams: TeamScreen
 var _prestige_screen: PrestigeScreen
@@ -145,6 +146,7 @@ func _on_tick() -> void:
 
 func _on_tab_selected(tab_id: String) -> void:
 	_task_board = null
+	_command_card = null
 	_roster = null
 	_teams = null
 	_prestige_screen = null
@@ -405,6 +407,10 @@ func _build_hq_content() -> Control:
 	scroll.add_child(column)
 
 	column.add_child(_build_objective_card())
+	_command_card = CommandProgressCard.new()
+	_command_card.name = "CommandProgressCard"
+	_command_card.refresh(_pack, _state)
+	column.add_child(_command_card)
 	column.add_child(_build_network_card())
 	if HeroFocus.enabled(_pack):
 		_focus_card = HeroFocusCard.new()
@@ -450,6 +456,12 @@ func _next_objective() -> Dictionary:
 			"step": 3,
 			"done": false,
 			"text": _pack.label("ui.objective_recruit", "Recruit a second operative in Heroes."),
+		}
+	if CommandProgression.current_level(_state, _pack) < CommandProgression.stage_unlock_level(_pack, "city"):
+		return {
+			"step": 4,
+			"done": false,
+			"text": _pack.label("ui.objective_city", "Reach Command Level 3 to unlock Citywide Defense."),
 		}
 	if not first_branch.is_empty() and Research.rank(_state, first_branch) == 0:
 		return {

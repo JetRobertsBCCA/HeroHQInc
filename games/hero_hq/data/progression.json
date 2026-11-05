@@ -1,7 +1,7 @@
 {
 	"stages": [
-		{"id": "street", "name_key": "stages.street", "order": 1},
-		{"id": "city", "name_key": "stages.city", "order": 2},
+		{"id": "street", "name_key": "stages.street", "order": 1, "unlock_command_level": 1},
+		{"id": "city", "name_key": "stages.city", "order": 2, "unlock_command_level": 3},
 		{"id": "national", "name_key": "stages.national", "order": 3}
 	],
 	"categories": [
@@ -24,6 +24,16 @@
 				{"type": "own_agents", "count": 3},
 				{"type": "complete_tasks", "count": 6},
 				{"type": "earn_resource_lifetime", "resource_id": "credits", "amount": 500}
+			]
+		},
+		{
+			"level": 3,
+			"name_key": "command.level_3",
+			"requirements": [
+				{"type": "own_agents", "count": 4},
+				{"type": "complete_tasks", "count": 12},
+				{"type": "earn_resource_lifetime", "resource_id": "credits", "amount": 1500},
+				{"type": "own_role_any", "role_ids": ["tech", "support"]}
 			]
 		}
 	]

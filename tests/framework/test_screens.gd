@@ -6,7 +6,7 @@ const PACK_ID := "hero_hq"
 
 
 func _pack() -> GamePack:
-	return GamePackLoader.load_pack(PACK_ID)["pack"]
+	return without_stage_gates(GamePackLoader.load_pack(PACK_ID)["pack"])
 
 
 func test_task_board_lists_every_declared_task() -> void:

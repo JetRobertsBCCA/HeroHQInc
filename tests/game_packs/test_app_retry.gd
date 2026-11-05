@@ -38,9 +38,13 @@ func _paused_state(pack: GamePack) -> Dictionary:
 	var state := Simulation.new_state(pack, 7, NOW)
 	state.game_id = PROFILE_ID
 	state.resources["credits"] = 500.0
-	state.stats["tasks_completed"] = 0
+	state.stats["tasks_completed"] = 12
+	state.stats["earned"] = {"credits": 1500.0}
 	state.upgrades["ops_automation"] = 1
 	state.agents["test_striker"] = _agent("test_striker", "striker")
+	state.agents["test_tech"] = _agent("test_tech", "tech")
+	state.agents["test_reserve"] = _agent("test_reserve", "support")
+	state.agents["test_medic"] = _agent("test_medic", "support")
 	var support := _agent("test_support", "support")
 	state.agents["test_support"] = support.duplicate(true)
 	AutoRepeat.remember(state, TASK_ID, LINEUP)

@@ -198,9 +198,23 @@ a brief completion/reward pulse, and a persistent reduced-motion toggle.
 Non-colour labels (`LIVE`, `READY`, `STANDBY`, `COMPLETE`), percentages and
 shapes keep idle, working and completed states distinct without the palette.
 
-Not implemented yet: command-level milestones and sector unlocks, configured
-Auto Patrol and team autopilot with their wait reasons, team mastery, synergies
-and named team slots, traits, specializations, legendaries, agency contracts, and
+Command Levels are now live. Level 2 asks for 3 agents, 6 completed operations
+and 500 lifetime Credits; level 3 asks for 4 agents, 12 completed operations,
+1,500 lifetime Credits and a Tech or Support hero, then unlocks Citywide
+Defense. HQ shows the current level, the next milestone, live requirement
+progress and the stage it unlocks. City operations stay visible but disabled
+with a required/current Command Level reason until the milestone is met. Levels
+are derived from existing saved totals, so older profiles need no migration; a
+City operation already running when the gate arrives still settles. Targeted
+recruitment and Street operations are enough to reach level 3 without Intel. A
+deterministic fresh-save route with no grants reaches level 2 at 2:40 and City
+at 4:40 in-game, using 33 dispatches across Alley Patrol, Break-In Response and
+Stakeout; that route found no stall or repetition worth tuning, so the approved
+requirements and Street rewards are unchanged.
+
+Not implemented yet: command milestones beyond City, National Response gating,
+configured Auto Patrol and team autopilot with their wait reasons, team mastery,
+synergies and named team slots, traits, specializations, legendaries, agency contracts, and
 an offline earnings report. Monetization (M6) and physical-device Android testing
 remain out of scope for this pass. The debug build runs on an emulator; release
 signing, an app icon and a phone run remain.

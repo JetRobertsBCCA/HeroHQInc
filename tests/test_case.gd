@@ -42,6 +42,18 @@ func assert_has_error_code(errors: Array, expected_code: String, message: String
 	assert_true(codes.has(expected_code), "%s (codes: %s)" % [message, str(codes)])
 
 
+## Framework fixtures that are testing a later-stage task's rating, role or
+## automation logic can open its stage for that fixture. Progression itself is
+## covered against the unmodified pack in test_command_progression.gd.
+func without_stage_gates(pack: GamePack) -> GamePack:
+	var stages: Variant = pack.progression.get("stages", [])
+	if stages is Array:
+		for raw in stages:
+			if raw is Dictionary:
+				(raw as Dictionary).erase("unlock_command_level")
+	return pack
+
+
 func failures() -> Array[String]:
 	return _failures
 

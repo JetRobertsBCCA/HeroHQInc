@@ -36,11 +36,13 @@ func _state(pack: GamePack) -> GameState:
 	var state := Simulation.new_state(pack, 9, NOW)
 	state.game_id = PROFILE_ID
 	state.resources["credits"] = 500.0
-	state.stats["tasks_completed"] = 0
+	state.stats["tasks_completed"] = 12
+	state.stats["earned"] = {"credits": 1500.0}
 	state.upgrades = {}
 	state.agents["hero_volt"]["attributes"] = {"power": 10, "speed": 9, "skill": 9}
 	state.agents["test_ace"] = _agent("test_ace", "striker")
 	state.agents["test_support"] = _agent("test_support", "support")
+	state.agents["test_tech"] = _agent("test_tech", "tech")
 	Squads.save(state, TASK_ID, INITIAL_LINEUP)
 	return state
 
@@ -123,7 +125,7 @@ func test_successful_squad_deploy_saves_the_started_lineup() -> void:
 		"the started lineup becomes the saved preset",
 	)
 	assert_eq(state.resource("credits"), 500.0, "deployment consumes no Credits")
-	assert_eq(state.tasks_completed(), 0, "deployment does not complete a task")
+	assert_eq(state.tasks_completed(), 12, "deployment does not complete a task")
 
 	var refreshed: TeamScreen = app.get("_teams")
 	assert_true(refreshed != null, "the Teams screen rebuilds after deployment")

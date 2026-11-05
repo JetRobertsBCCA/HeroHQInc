@@ -3,6 +3,77 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.14 — Command Levels and the City unlock (2026-11-05)
+
+Status: complete headlessly and in 360×640 windowed captures; no formal reviewer
+playtest or new Android device pass was started.
+
+### What was wrong
+
+`progression.json` declared levels 1 and 2, but nothing evaluated their
+requirements or derived a level from state. City operations were gated only by
+rating, so the Street-to-City milestone did not exist in play. HQ had no view of
+the next milestone, and Research was the next objective even though its Intel
+source was the still-locked City stage.
+
+### What changed
+
+- `CommandProgression` derives contiguous levels from existing saved state:
+  roster size, completed operations, lifetime earnings and owned roles. No
+  command-level field or save-schema migration was added; an older profile is
+  evaluated from the totals it already has.
+- Level 3 (attainable from Street play and targeted recruitment) requires four
+  agents, twelve completed operations, 1,500 lifetime Credits and a Tech or
+  Support hero. It unlocks Citywide Defense. Level 2 remains three agents, six
+  operations and 500 lifetime Credits.
+- `Simulation.evaluate_assignment` now checks the operation's stage before role,
+  rating or count gates. A locked City operation returns `stage_locked` with the
+  required and current Command Level, so direct deploys, auto-repeat and every UI
+  path share one rule. Settlement does not re-check the gate: a City assignment
+  already running in an older save still finishes and pays normally.
+- HQ gains a Command Level card showing the current level, next milestone,
+  live per-requirement progress, `Unlocks: Citywide Defense` at level 2, and the
+  completed unlock at level 3. The next-objective card now points to Command
+  Level 3 before Research, removing the dead-end Research instruction.
+- Missions and Teams show the localized stage-lock reason; the auto-repeat
+  banner reports it too when a remembered operation is in a locked stage.
+- Locale adds level 3 plus milestone, requirement, unlock and stage-lock copy.
+  Pack content version is 3; save schema remains 1.
+- National Response is deliberately outside this slice and has no command-level
+  gate yet; later milestones still show the explicit `later update` state.
+
+### Route check
+
+A deterministic model drove a fresh save through the real simulation with no
+grants: recruit the next two candidates, train the starter to level 2 with three
+25-Credit sessions, then take the better-rated Tech/Support candidate for the
+level 3 role requirement, dispatching every idle agent to its best legal Street
+operation. It reached level 2 at 2:40 in-game (17 operations, 691 lifetime
+Credits) and level 3/City at 4:40 (33 operations, 1,549 lifetime Credits). The
+route used 33 dispatches: 18 Alley Patrol, 11 Stakeout and 4 Break-In Response;
+Alley was first useful at 0:00, Stakeout at 0:40, and Break-In at 2:40. No agent
+sat idle, and the lifetime-Credit gate, not the operation count, set the pace,
+so the approved level requirements and Street rewards were left unchanged.
+Break-In's window is narrow: the rating-85 Striker always prefers Stakeout, and
+only the later Support hire used Break-In; that is noted for the deferred
+playtest rather than changed in this slice.
+
+### Checks
+
+- Godot headless suite: **133/133 passed** (eight new progression cases).
+  Coverage includes fresh level 1 and City refusal, level-2 requirements,
+  Tech/Support recovery, a Street-only route to level 3 with zero Intel, a
+  pre-command-level save, an in-flight legacy City assignment, the fresh HQ card
+  and mission reason, and an existing level-3 save restoring the City unlock.
+- `tooling/validate_packs.gd`: `OK hero_hq`, 1 pack checked, 0 invalid.
+- 360×640 windowed captures: the HQ Command Level 1 card (next level 2), the HQ
+  Command Level 2 card (next level 3 with the Tech/Support row), the locked Drone
+  Swarm row in Missions and the locked Joint Raid row in Teams. All four
+  requirement rows, the wrapped Tech/Support label and the full `Citywide
+  Defense requires Command Level 3 (current 2).` reason were legible; no clipped
+  text or overlapping controls.
+- No formal reviewer playtest was started.
+
 ## M1.13 — Live operations network (2026-11-05)
 
 Status: complete headlessly and in 360×640 windowed captures; no new Android
@@ -146,8 +217,8 @@ instant.
 
 Remaining gameplay gaps, highest priority first:
 
-1. Command Level milestones are data-only; no requirements are evaluated and no
-   sector/team/automation unlocks are applied.
+1. Command Levels are implemented through the City unlock; later milestones and
+   National Response gating remain.
 2. Team depth: no named team slots, composition synergies or category mastery.
 3. Automation is one remembered last operation, not configured Auto Patrol /
    team autopilot rules with slots and visible wait reasons.

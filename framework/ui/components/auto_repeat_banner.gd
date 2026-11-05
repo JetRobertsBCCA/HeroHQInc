@@ -140,6 +140,8 @@ func _paused_reason() -> String:
 				"ui.auto_repeat_research_locked",
 				"Auto-repeat research is locked.",
 			)
+		Simulation.ERROR_STAGE_LOCKED:
+			return CommandProgression.stage_lock_text(_pack, _snapshot)
 		Simulation.ERROR_UNKNOWN_TASK:
 			return _pack.label(
 				"ui.auto_repeat_missing_task",
