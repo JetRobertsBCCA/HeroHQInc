@@ -6,7 +6,8 @@ extends Control
 ## blocks simply shows no control instead of a dead button.
 
 signal train_requested(agent_id: String)
-signal recruit_requested(role_id: String)
+## The player pressed one visible offer. The app revalidates that exact id.
+signal recruit_requested(agent_id: String)
 
 const MIN_TAP_HEIGHT := 48
 ## A 240-slot roster does not need 240 live rows to be usable, and building
@@ -18,9 +19,9 @@ var _state: GameState
 var _root: VBoxContainer
 var _list: VBoxContainer
 var _recruit_box: VBoxContainer
-var _recruit_button: Button
-var _recruit_role_option: OptionButton
-var _recruit_role: String = ""
+var _recruit_buttons: Dictionary = {}
+var _recruit_cards: Dictionary = {}
+var _recruit_ids: Array[String] = []
 var _buttons: Dictionary = {}
 
 
@@ -35,23 +36,26 @@ func train_button(agent_id: String) -> Button:
 	return null
 
 
-func recruit_button() -> Button:
-	return _recruit_button
+func recruit_offer_count() -> int:
+	return _recruit_ids.size()
 
 
-func recruit_role_option() -> OptionButton:
-	return _recruit_role_option
+func recruit_offer_ids() -> Array[String]:
+	return _recruit_ids.duplicate()
 
 
-func recruit_role() -> String:
-	return _recruit_role
+func recruit_offer_button(agent_id: String) -> Button:
+	var value: Variant = _recruit_buttons.get(agent_id, null)
+	if value is Button:
+		return value
+	return null
 
 
-## Chooses the role the next recruit should have. An empty id means any role.
-func select_recruit_role(role_id: String) -> void:
-	_recruit_role = role_id
-	if _pack != null and _state != null:
-		_refresh_recruitment()
+func recruit_offer_card(agent_id: String) -> Control:
+	var value: Variant = _recruit_cards.get(agent_id, null)
+	if value is Control:
+		return value
+	return null
 
 
 func refresh(pack: GamePack, state: GameState) -> void:
@@ -211,126 +215,156 @@ func _refresh_recruitment() -> void:
 	for child in _recruit_box.get_children():
 		_recruit_box.remove_child(child)
 		child.queue_free()
-	_recruit_button = null
-	_recruit_role_option = null
+	_recruit_buttons.clear()
+	_recruit_cards.clear()
+	_recruit_ids.clear()
 	if not Recruitment.enabled(_pack):
 		_recruit_box.get_parent().visible = false
 		return
 	_recruit_box.get_parent().visible = true
 
 	var heading := Label.new()
-	heading.text = _pack.label("ui.recruit", "Recruit")
+	heading.text = _pack.label("ui.recruit_choose", "Choose one of two offers")
 	heading.add_theme_font_size_override("font_size", 14)
 	heading.add_theme_color_override("font_color", ThemeTokens.color(_pack, "accent"))
 	_recruit_box.add_child(heading)
 
-	# Without this the ladder can stall on a single missing role: a uniform pool
-	# may take dozens of hires to produce the one role the next operation needs.
-	var role_row := HBoxContainer.new()
-	role_row.add_theme_constant_override("separation", 8)
-	var role_label := Label.new()
-	role_label.text = _pack.label("ui.recruit_role", "Role")
-	role_label.add_theme_font_size_override("font_size", 11)
-	role_label.add_theme_color_override("font_color", ThemeTokens.color(_pack, "muted"))
-	role_row.add_child(role_label)
-
-	_recruit_role_option = OptionButton.new()
-	_recruit_role_option.name = "RecruitRole"
-	_recruit_role_option.custom_minimum_size = Vector2(0, MIN_TAP_HEIGHT)
-	_recruit_role_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_recruit_role_option.add_item(_pack.label("ui.any_role", "Any role"))
-	_recruit_role_option.set_item_metadata(0, "")
-	var selected_index := 0
-	var role_ids: Array = _pack.roles.keys()
-	role_ids.sort()
-	for raw_role in role_ids:
-		var role_id := str(raw_role)
-		var index := _recruit_role_option.item_count
-		_recruit_role_option.add_item(
-			_pack.label(str(_pack.role(role_id).get("name_key", "")), role_id)
-		)
-		_recruit_role_option.set_item_metadata(index, role_id)
-		if role_id == _recruit_role:
-			selected_index = index
-	_recruit_role_option.select(selected_index)
-	_recruit_role_option.item_selected.connect(_on_recruit_role_selected)
-	role_row.add_child(_recruit_role_option)
-	_recruit_box.add_child(role_row)
-
-	var candidate := Recruitment.next_candidate_for_role(_state, _pack, _recruit_role)
-	if candidate.is_empty():
+	var offers := Recruitment.offers(_state, _pack)
+	if offers.is_empty():
 		var unavailable := Label.new()
-		unavailable.text = _pack.label(
-			"ui.blocked_role_unavailable", "No recruit of that role is available"
-		)
+		unavailable.text = _pack.label("ui.recruit_none", "No recruit offers are available")
 		unavailable.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		unavailable.add_theme_font_size_override("font_size", 11)
 		unavailable.add_theme_color_override("font_color", ThemeTokens.color(_pack, "warning"))
 		_recruit_box.add_child(unavailable)
 		return
 
+	for raw_offer in offers:
+		var offer: Dictionary = raw_offer
+		var card := _recruit_offer_card(offer)
+		_recruit_box.add_child(card)
+		_recruit_cards[str(offer["id"])] = card
+		_recruit_ids.append(str(offer["id"]))
+
+	var hint := Label.new()
+	hint.text = _pack.label(
+		"ui.recruit_refresh_hint",
+		"New offers after a hire or a Command Level increase."
+	)
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 10)
+	hint.add_theme_color_override("font_color", ThemeTokens.color(_pack, "muted"))
+	_recruit_box.add_child(hint)
+
+
+func _recruit_offer_card(offer: Dictionary) -> Control:
+	var agent_id := str(offer.get("id", ""))
+	var role_id := str(offer.get("role_id", ""))
+	var tier_id := str(offer.get("tier_id", ""))
+	var role_name := _pack.label(str(_pack.role(role_id).get("name_key", "")), role_id)
+	var tier_name := _pack.label("tiers.%s" % tier_id, tier_id)
+	var resource := Recruitment.resource_id(_pack)
+	var price := int(offer.get("cost", 0))
+	var affordable := _state.resource(resource) + 0.0001 >= float(price)
+	var full := _state.agents.size() >= Recruitment.capacity(_pack)
+
+	var card := PanelContainer.new()
+	card.name = "RecruitOffer_%s" % agent_id
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 3)
+	card.add_child(column)
+
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 8)
+	column.add_child(top)
 	var name_label := Label.new()
-	name_label.text = str(candidate["name"])
+	name_label.name = "OfferName_%s" % agent_id
+	name_label.text = str(offer.get("name", agent_id))
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_label.add_theme_font_size_override("font_size", 14)
 	name_label.add_theme_color_override("font_color", ThemeTokens.color(_pack, "text"))
 	top.add_child(name_label)
 	var rating_label := Label.new()
-	rating_label.text = "%s %d" % [_pack.label("ui.rating", "Rating"), int(candidate["rating"])]
-	rating_label.add_theme_color_override("font_color", ThemeTokens.color(_pack, "reward"))
-	rating_label.add_theme_font_size_override("font_size", 12)
-	top.add_child(rating_label)
-	_recruit_box.add_child(top)
-
-	var role_id := str(candidate["role_id"])
-	var tier_id := str(candidate["tier_id"])
-	var detail := Label.new()
-	detail.text = "%s · %s" % [
-		_pack.label(str(_pack.role(role_id).get("name_key", "")), role_id),
-		_pack.label("tiers.%s" % tier_id, tier_id),
+	rating_label.name = "OfferRating_%s" % agent_id
+	rating_label.text = "%s %d" % [
+		_pack.label("ui.rating", "Rating"), int(offer.get("rating", 0)),
 	]
-	detail.add_theme_font_size_override("font_size", 11)
-	detail.add_theme_color_override("font_color", ThemeTokens.color(_pack, "muted"))
-	_recruit_box.add_child(detail)
+	rating_label.add_theme_font_size_override("font_size", 12)
+	rating_label.add_theme_color_override("font_color", ThemeTokens.color(_pack, "reward"))
+	top.add_child(rating_label)
 
-	var resource := Recruitment.resource_id(_pack)
-	var price := int(candidate.get("cost", 0))
-	var affordable := _state.resource(resource) + 0.0001 >= float(price)
-	var full := _state.agents.size() >= Recruitment.capacity(_pack)
-	_recruit_button = Button.new()
-	_recruit_button.name = "RecruitButton"
-	_recruit_button.custom_minimum_size = Vector2(0, MIN_TAP_HEIGHT)
-	_recruit_button.disabled = full or not affordable
-	if full:
-		_recruit_button.text = _pack.label("ui.roster_full", "Roster full")
+	var role_label := Label.new()
+	role_label.name = "OfferRole_%s" % agent_id
+	role_label.text = "%s · %s" % [role_name, tier_name]
+	role_label.add_theme_font_size_override("font_size", 11)
+	role_label.add_theme_color_override("font_color", ThemeTokens.color(_pack, "muted"))
+	column.add_child(role_label)
+
+	var attributes_label := Label.new()
+	attributes_label.name = "OfferAttrs_%s" % agent_id
+	attributes_label.text = _attribute_text(offer.get("attributes", {}))
+	attributes_label.add_theme_font_size_override("font_size", 10)
+	attributes_label.add_theme_color_override("font_color", ThemeTokens.color(_pack, "muted"))
+	column.add_child(attributes_label)
+
+	var role_count := maxi(int(offer.get("role_count", 0)), 0)
+	var fit_label := Label.new()
+	fit_label.name = "OfferFit_%s" % agent_id
+	if role_count == 0:
+		fit_label.text = _pack.label("ui.recruit_adds_new_role", "Adds a new %s role") % role_name
 	else:
-		_recruit_button.text = "%s · %d %s" % [
+		fit_label.text = _pack.label("ui.recruit_adds_role_n", "Adds %s #%d") % [
+			role_name, role_count + 1,
+		]
+	fit_label.add_theme_font_size_override("font_size", 10)
+	fit_label.add_theme_color_override(
+		"font_color",
+		ThemeTokens.color(_pack, "accent" if role_count == 0 else "muted"),
+	)
+	column.add_child(fit_label)
+
+	var button := Button.new()
+	button.name = "Recruit_%s" % agent_id
+	button.custom_minimum_size = Vector2(0, MIN_TAP_HEIGHT)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.disabled = full or not affordable
+	if full:
+		button.text = _pack.label("ui.roster_full", "Roster full")
+	else:
+		button.text = "%s · %d %s" % [
 			_pack.label("ui.recruit", "Recruit"),
 			price,
 			_pack.label("resources.%s" % resource, resource),
 		]
-	_recruit_button.pressed.connect(_on_recruit_pressed)
-	_recruit_box.add_child(_recruit_button)
+	button.pressed.connect(_on_recruit_pressed.bind(agent_id))
+	column.add_child(button)
+	_recruit_buttons[agent_id] = button
+
 	if not full and not affordable:
 		var reason := Label.new()
+		reason.name = "OfferReason_%s" % agent_id
 		reason.text = _pack.label("ui.blocked_insufficient_resource", "Not enough %s") % _pack.label(
 			"resources.%s" % resource, resource
 		)
-		reason.add_theme_font_size_override("font_size", 11)
+		reason.add_theme_font_size_override("font_size", 10)
 		reason.add_theme_color_override("font_color", ThemeTokens.color(_pack, "warning"))
 		reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_recruit_box.add_child(reason)
+		column.add_child(reason)
+	return card
 
 
-func _on_recruit_role_selected(index: int) -> void:
-	if _recruit_role_option == null:
-		return
-	select_recruit_role.call_deferred(str(_recruit_role_option.get_item_metadata(index)))
+func _attribute_text(attributes: Variant) -> String:
+	var values: Dictionary = attributes if attributes is Dictionary else {}
+	var parts: Array[String] = []
+	for raw_name in Recruitment.attribute_names(_pack):
+		var name := str(raw_name)
+		var label := _pack.label("attributes.%s" % name, name.capitalize())
+		parts.append("%s %d" % [label, int(values.get(name, 0))])
+	return " · ".join(parts)
 
 
-func _on_recruit_pressed() -> void:
-	recruit_requested.emit(_recruit_role)
+func _on_recruit_pressed(agent_id: String) -> void:
+	recruit_requested.emit(agent_id)
 
 
 func _on_train_pressed(agent_id: String) -> void:

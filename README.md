@@ -47,6 +47,9 @@ godot --path . --resolution 360x640 -s res://tooling/hq_viewport_capture.gd
 
 # capture the Mission board in fresh, active, Auto Patrol live/paused and locked states at 360x640
 godot --path . --resolution 360x640 -s res://tooling/missions_viewport_capture.gd -- --tag=after
+
+# capture the Heroes two-offer screen fresh and midgame at 360x640
+godot --path . --resolution 360x640 -s res://tooling/heroes_viewport_capture.gd -- --tag=after
 ```
 
 Downloads for the pinned engine: <https://godotengine.org/download/linux/>.
@@ -64,8 +67,9 @@ adb install -r build/hero_hq.apk
 
 Verified on an Android 35 x86_64 emulator (Pixel 6 AVD, host GPU), not yet on a
 physical phone: install and launch, fresh-save onboarding, first mission and
-payout, all five tabs, force-stop/relaunch persistence, role-targeted
-recruitment, a research purchase and a two-step rebirth. Seeded offline saves
+payout, all five tabs, force-stop/relaunch persistence, recruitment, a research
+purchase and a two-step rebirth. The two-offer Heroes screen has only been
+verified in windowed 360×640 captures so far, not in an emulator pass. Seeded offline saves
 settled a due operation once across force-stop/relaunch, instant training
 persisted, and persisted auto-repeat re-armed after settlement while closed;
 squad automation kept its exact lineup across reloads. A live banner on Missions
@@ -93,9 +97,15 @@ with 50 Credits, which is enough for one training session and no more.
    that updates on the existing one-second tick, not a tween.
 3. **Heroes** shows rating, level, XP bar and `Train` (25 Credits for +40 XP,
    cost ×1.4 per level). The starter gains +20 rating per level, so early levels
-   open new tiers quickly. Recruitment draws from 200 named slots, costs 50
-   Credits with ×1.03 growth, and has a **role picker**: choose Tech and the next
-   affordable hire is a Tech, instead of hoping the pool rolls one.
+   open new tiers quickly. Recruitment shows **two persistent offers** with
+   distinct roles, ratings, tiers, attributes and exact Credit prices. Each card
+   states what the hire adds ("Adds a new Tech role", "Adds Support #2"), so the
+   choice is informed rather than a blind draw. The pair is deterministic from
+   200 named slots, survives reloads, and refreshes only after a hire or a
+   Command Level increase: there is no paid reroll. Missing Tech/Support and
+   squad roles are prioritized, a same-price higher-rating card is re-paired to
+   preserve a real cost-versus-quality choice, and prices start at 50 Credits
+   with ×1.03 growth per standing hero.
 4. A deployed operation moves to **Live operations** with a countdown and an
    in-place progress bar. When it reaches zero it pays out, the heroes are freed
    and the result is logged on the HQ tab. HQ's **Operations Network** gives
@@ -177,6 +187,7 @@ tooling/playthrough_demo.gd  real-UI playthrough, fresh save to rebirth
 tooling/ui_capture.gd      windowed PNG capture of every tab
 tooling/network_capture.gd  controlled network state captures
 tooling/missions_viewport_capture.gd  strict Missions fresh/active/patrol/paused/locked/national capture
+tooling/heroes_viewport_capture.gd   strict Heroes two-offer fresh/midgame capture
 ```
 
 **Dependency direction:** `games/* -> framework/*`. The framework never imports a
@@ -188,7 +199,7 @@ fails the build if that rule is broken.
 Working now: the loop end to end — deploy, settle (online and offline), earn,
 level up, train, recruit, research, rebirth, save, resume — on validated pack
 data, with an invalid pack rendering a readable error screen instead of crashing.
-Recruitment can target a role, HQ names the next objective, and Upgrades spends
+Recruitment shows two persistent, gate-aware offers with exact prices, HQ names the next objective, and Upgrades spends
 Intel on payout and training research plus a 30-Intel squad auto-repeat rank
 that repeats a saved squad operation once per completion, including after a
 relaunch. A separate 2-Intel Auto Patrol repeats one solo operation only after
@@ -218,43 +229,42 @@ Defense. HQ shows the current level, the next milestone, live requirement
 progress and the stage it unlocks. City operations stay visible but disabled
 with a required/current Command Level reason until the milestone is met. Levels
 are derived from existing saved totals, so older profiles need no migration; a
-City operation already running when the gate arrives still settles. Targeted
-recruitment and Street operations are enough to reach level 3 without Intel. A
-deterministic fresh-save route with no grants reaches level 2 at 2:40 and City
-at 4:40 in-game, using 33 dispatches across Alley Patrol, Break-In Response and
-Stakeout; that route found no stall or repetition worth tuning, so the approved
-requirements and Street rewards are unchanged.
+City operation already running when the gate arrives still settles. The visible
+Tech/Support offers and Street operations are enough to reach level 3 without
+Intel. The current deterministic fresh-save route with no grants reaches City at
+6:00 in-game with 34 dispatches, 44 completed operations, 1,624 lifetime
+Credits, 4 agents and 4 roles; that route found no deadlock, with a longest
+completion gap of 40 seconds.
 
 Level 4 asks for 5 agents, 40 completed operations, 3,500 lifetime Credits,
 heroes in 4 roles and one completed squad operation, then unlocks National
 Response. It derives from existing saved totals, needs no Intel or currently
 locked National job, and gates all four National operations through the same
 stage rule in direct deploys, Missions, Teams and auto-repeat. A no-grant route
-reaches City at 5:20 and National at 8:40 in-game: 3:20 later, 60 dispatches,
-60 operations, 3,686 lifetime Credits, 5 agents in 4 roles and one completed
-squad, with a longest completion gap of 40 seconds and no deadlock. A National
+reaches City at 6:00 and National at 9:50 in-game: 3:50 later, 60 dispatches,
+79 completed operations, 3,909 lifetime Credits, 5 agents in 5 roles and one
+completed squad, with a longest completion gap of 40 seconds and no deadlock. A National
 operation already running on an older save still settles normally.
 
-Before this tuning, Auto Patrol became affordable only at 8:40 after 64 manual
-dispatches. It now becomes affordable at the first Break-In Response Intel
-payout: at **5:50**, after **44 manual dispatches** and 40 operations. Its
+Before the offer redesign, Auto Patrol became affordable only at 8:40 after 64
+manual dispatches. It now becomes affordable at the first Break-In Response
+Intel payout: at **2:10**, after **10 manual dispatches** and 7 operations. Its
 **2-Intel** branch is bought and enabled immediately, before the first squad.
-The selected non-squad hero is still finishing a deployed operation, so the card shows the
-paused reason for 30 seconds; the first automatic cycle starts at **6:20** and
-completes at **7:00**, after 51 manual dispatches and 40 seconds before the
-first squad completes at 7:40 for 850 Credits + 8 Intel. The route still reaches
-National at 8:40 with **60 manual dispatches**, 60 operations, 3,686 lifetime
-Credits, 5 agents in 4 roles and one squad; the National gate is unchanged. A
-nine-hour return then applies exactly 28,800 seconds: 720 away patrol starts,
-724 operations complete in the away pass including four other in-flight jobs,
-69,015 Credits are earned, and a second settlement pays nothing. Squad
-auto-repeat retains its separate 30-Intel branch and exact lineup behavior.
+The selected non-squad hero is still finishing a deployed operation, so the card
+shows the paused reason; the first automatic cycle starts at **2:20** and
+completes at **2:40**, after 12 manual dispatches. The route still reaches
+National at 9:50 with **60 manual dispatches**, 79 completed operations, 3,909
+lifetime Credits, 5 agents in 5 roles and one squad; the National gate is
+unchanged. A nine-hour return then applies exactly 28,800 seconds: 1,440 away
+patrol starts, 1,444 operations complete in the away pass including four other
+in-flight jobs, 26,191 Credits are earned, and a second settlement pays nothing.
+Squad auto-repeat retains its separate 30-Intel branch and exact lineup
+behavior.
 
 City now has a role-shaped second tier: Convoy Ambush is the Support's
 high-rating solo, while Joint Raid is the better use of a Support and Striker
-together. A fresh-save model reaches City at 4:40, starts the first squad at
-5:55 and completes it at 7:35, and clears all eight City firsts by 10:35 without
-an idle stall. The 15-operation ladder and Street gate are unchanged.
+together. The current no-grant route completes the first Joint Raid at 8:20;
+the 15-operation ladder and Street gate are unchanged.
 
 Not implemented yet: command milestones beyond National Response, team
 autopilot with its wait reasons, team mastery,

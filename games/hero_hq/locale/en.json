@@ -49,6 +49,9 @@
 
 	"resources.credits": "Credits",
 	"resources.intel": "Intel",
+	"attributes.power": "Power",
+	"attributes.speed": "Speed",
+	"attributes.skill": "Skill",
 
 	"ui.command_next": "Next · %s",
 	"ui.command_unlock": "Unlocks: %s",
@@ -144,6 +147,7 @@
 	"ui.blocked_unknown_task": "Unknown task",
 	"ui.blocked_insufficient_resource": "Not enough %s",
 	"ui.blocked_training_unavailable": "Training unavailable",
+	"ui.blocked_offer_unavailable": "That offer is no longer available",
 
 	"ui.auto_repeat_title": "Auto-repeat",
 	"ui.auto_repeat_armed": "Armed · %s",
@@ -255,9 +259,11 @@
 	"ui.blocked_research_max_rank": "Already fully researched",
 
 	"ui.recruit": "Recruit",
-	"ui.recruit_role": "Role",
-	"ui.any_role": "Any role",
-	"ui.blocked_role_unavailable": "No recruit of that role is available",
+	"ui.recruit_choose": "Choose one of two offers",
+	"ui.recruit_refresh_hint": "New offers after a hire or a Command Level increase.",
+	"ui.recruit_adds_new_role": "Adds a new %s role",
+	"ui.recruit_adds_role_n": "Adds %s #%d",
+	"ui.recruit_none": "No recruit offers are available",
 	"ui.recruit_tier": "Tier",
 	"ui.recruited": "Recruited",
 	"ui.roster_showing": "Showing first %d of %d operatives",

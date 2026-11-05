@@ -60,6 +60,10 @@ func _ready() -> void:
 	# unstarted patrol draft instead of letting it fire without a player choice.
 	if AutoRepeat.migrate_legacy_solo(_state):
 		SaveService.save_state(_state)
+	# Old saves have no visible offer pair. Generate it once from their existing
+	# recruit cursor so the first Heroes visit is informed without a migration.
+	if Recruitment.enabled(_pack):
+		Recruitment.ensure_offers(_state, _pack)
 	_reduced_motion = _read_reduced_motion()
 	_settle_absence()
 	# Re-arm a persisted auto-repeat after the absence has settled, before the
@@ -204,6 +208,8 @@ func _on_tab_selected(tab_id: String) -> void:
 
 
 func _refresh_content() -> void:
+	if Recruitment.enabled(_pack):
+		Recruitment.ensure_offers(_state, _pack)
 	_shell.refresh(_state)
 	_on_tab_selected(_shell.current_tab())
 
@@ -244,8 +250,8 @@ func _on_train_requested(agent_id: String) -> void:
 	_refresh_content()
 
 
-func _on_recruit_requested(role_id: String) -> void:
-	var result := Recruitment.recruit(_state, _pack, role_id)
+func _on_recruit_requested(offer_id: String) -> void:
+	var result := Recruitment.recruit_offer(_state, _pack, offer_id)
 	if not result.get("ok", false):
 		_log("%s: %s" % [
 			_pack.label("ui.recruit", "Recruit"),

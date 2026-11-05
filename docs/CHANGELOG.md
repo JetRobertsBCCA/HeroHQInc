@@ -3,6 +3,101 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.20 — Two visible recruitment offers (2026-11-05)
+
+Status: development verification complete headlessly and with 360×640 windowed
+captures; no formal reviewer playtest or new Android device pass was started.
+
+### What was wrong
+
+Heroes showed one recruit and a role picker. The player could not compare a
+second person, had to infer what the pick added to the roster, and paid before
+seeing the other choices. The picker was also a hidden way to scan the seeded
+pool, so the informed choice and the deterministic offer list did not agree.
+
+### What changed
+
+- `Recruitment.offers` returns two persistent offers backed by deterministic
+  pool slots. Each carries the seeded name, id, role, tier, rating, attributes
+  and exact live Credit price, plus `role_count` / `new_role` for roster fit.
+- The pair is saved in `extensions.recruitment` as two slot indices and an
+  `offer_level`; no save-schema migration is needed. An older save with only
+  `next_index` derives its first pair from that cursor, and later reads do not
+  mutate or charge for the pair.
+- Generation prioritizes the missing Tech/Support Command gate role, then every
+  missing squad role, then missing roles for the distinct-role milestone, then
+  deterministic roles from the pack. The two cards therefore keep targeted
+  access to both the City gate and Joint Raid even though there is no picker.
+- The pair refreshes only after a successful hire or a Command Level increase.
+  A level refresh is free, consumes the replaced pair, and advances
+  `next_index` past it. There is no manual or paid reroll. A stale or invented
+  offer id is refused without spending Credits and without replacing the pair.
+- `recruit_offer(offer_id)` validates the visible id before buying through the
+  same cost, capacity and roster path as the legacy `recruit` API. The legacy
+  role-targeted call remains for tooling/tests; the screen and route do not use
+  it to scan unseen slots.
+- If one card has at least the other's rating at the same or lower price, the
+  generator re-pairs that role with a higher-cost slot. The pair keeps its two
+  roles but becomes a real cost-versus-quality choice instead of one card being
+  an obvious trap. The exact price and tier remain deterministic.
+- `RosterScreen` now renders two stacked cards with name, rating, role, tier,
+  Power/Speed/Skill, "Adds a new … role" or "Adds … #n", exact price and a 48px
+  hire button. The role picker and single-candidate preview are gone. Locale
+  copy covers the chooser heading, refresh rule, attributes and offer refusal.
+- The app ensures offers at startup and before content refreshes, handles the
+  selected id through `recruit_offer`, and the playthrough/route tooling choose
+  from the visible pair. Content version stays 6; save schema remains 1.
+- `tooling/heroes_viewport_capture.gd` boots the real app at 360×640, backs up
+  and restores the save, and fails unless both cards fit, all comparison text
+  is present, the hire targets are 48px, no role picker exists, neither card
+  dominates on price/rating, and fresh/midgame PNGs are exactly 360×640.
+
+### Route check
+
+The no-grant route recruited four visible offers: Tech at 50 Credits (1:20),
+Support at 52 (1:40), Vanguard at 54 (2:00), and Mystic at 55 (6:00). The fresh
+pair's Elite Support cost 300 and stayed visible but unaffordable; after the
+Tech hire the refresh exposed an affordable 52-Credit Support. No role was
+scanned invisibly and no resource was granted.
+
+City unlocked at **6:00**: 34 dispatches, 44 completed operations, 1,624
+lifetime Credits, 4 agents and 4 roles. The first Joint Raid completed at
+**8:20** for 850 Credits + 8 Intel. National Response unlocked at **9:50**: 3:50
+later, 60 dispatches (26 after City), 79 completed operations, 3,909 lifetime
+Credits, 5 agents in 5 roles and one squad. The longest completion gap was 0:40
+and the route reported `ROUTE_OK` with no deadlock.
+
+Auto Patrol became affordable at the first Break-In payout at **2:10**, after 10
+dispatches and 7 operations. Its 2-Intel branch was bought and enabled
+immediately; the selected non-squad hero was still busy, the first cycle started
+at **2:20** and completed at **2:40** after 12 dispatches. A nine-hour return
+applied exactly 28,800 seconds: 1,440 away patrol starts, 1,444 away
+completions including four other jobs, 26,191 Credits, and no second payout on
+a repeated launch.
+
+### Checks
+
+- Godot headless suite: **159/159 passed** (seven new offer cases). Coverage
+  includes the two cards and their labels, deterministic slot prices, distinct
+  roles, gate/squad coverage, exact spend and one refresh after a hire, a free
+  Command Level refresh, save/reload persistence, old saves without offers,
+  stale-id refusal without cost or reroll, and no same-price rating dominance.
+- `tooling/validate_packs.gd`: `OK hero_hq`, 1 pack checked, 0 invalid.
+- `tooling/national_route.gd`: exit **0**, `ROUTE_OK`; City 6:00, first squad
+  8:20, National 9:50, Auto Patrol enabled 2:10. Full route facts are in the
+  section above.
+- 360×640 windowed captures: fresh content **344×456**, cards **140px** and
+  **157px**, hire buttons **48px**; the pair is Tech r70 / 50 Credits vs Support
+  Elite r100 / 300 Credits, with the second showing its exact insufficient-funds
+  reason. Midgame cards are **140px** each; the pair is Mystic r80 / 57 Credits
+  versus an existing Striker r85 / 141 Credits. Both cards fit completely above
+  the fold and both captures are exactly 360×640.
+- Captures: `ui_shots/heroes_offers_after_fresh.png` and
+  `ui_shots/heroes_offers_after_midgame.png`. The repository's existing
+  `.gitignore` excludes `ui_shots/`, so these remain local evidence like the
+  earlier capture sets.
+- No formal reviewer playtest was started.
+
 ## M1.19 — Player-controlled Auto Patrol (2026-11-05)
 
 Status: development verification complete headlessly and with 360×640 windowed

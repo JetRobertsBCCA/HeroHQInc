@@ -4,8 +4,8 @@ extends SceneTree
 ## The model uses only the real Simulation, Recruitment and AgentRules APIs. It
 ## never grants resources, skips a rating gate or edits saved totals. Its policy
 ## is deliberately ordinary rather than optimal:
-##   - a recruit is hired when affordable, targeting a missing fourth role at
-##     City level;
+##   - a recruit is hired from the two visible offers, preferring the missing
+##     Tech/Support or squad role when it is affordable;
 ##   - the starter is trained to level 2 for the Street role gate;
 ##   - at City, the cheapest legal squad pair is trained until Joint Raid opens;
 ##   - otherwise every idle agent takes its best-paying legal City or Street job;
@@ -603,17 +603,64 @@ func _try_train(agent_id: String) -> bool:
 	return bool(Simulation.train_agent(_state, _pack, agent_id).get("ok", false))
 
 
+## Chooses one of the two visible offers. A role target is preferred when it
+## exists and is affordable; otherwise the route takes the cheapest affordable
+## offer only when the requested role is completely absent.
 func _try_recruit(role_id: String) -> bool:
-	var candidate := Recruitment.next_candidate_for_role(_state, _pack, role_id)
-	if candidate.is_empty():
-		if role_id.is_empty():
-			return false
-		candidate = Recruitment.next_candidate(_state, _pack)
-		if candidate.is_empty():
-			return false
-	if _state.resource(Recruitment.resource_id(_pack)) + 0.0001 < float(candidate.get("cost", 0)):
+	var offers := Recruitment.offers(_state, _pack)
+	if offers.is_empty():
 		return false
-	return bool(Recruitment.recruit(_state, _pack, role_id).get("ok", false))
+	var resource := Recruitment.resource_id(_pack)
+	var cheapest: Dictionary = {}
+	var new_role: Dictionary = {}
+	var target: Dictionary = {}
+	var target_exists := false
+	for raw in offers:
+		var offer: Dictionary = raw
+		if str(offer.get("role_id", "")) == role_id:
+			target_exists = true
+		if not affordable_offer(offer, resource):
+			continue
+		if cheapest.is_empty() or int(offer.get("cost", 0)) < int(cheapest.get("cost", 0)):
+			cheapest = offer
+		if not _has_role(str(offer.get("role_id", ""))):
+			if new_role.is_empty() or int(offer.get("cost", 0)) < int(new_role.get("cost", 0)):
+				new_role = offer
+		if not role_id.is_empty() and str(offer.get("role_id", "")) == role_id:
+			if target.is_empty() or int(offer.get("cost", 0)) < int(target.get("cost", 0)):
+				target = offer
+	# A target that is visible but unaffordable must be waited for: buying a
+	# substitute first would fill the roster slot the gate needs.
+	if target_exists and target.is_empty():
+		return false
+	var chosen := target if not target.is_empty() else new_role
+	if chosen.is_empty():
+		chosen = cheapest
+	if chosen.is_empty():
+		return false
+	var labels: Array[String] = []
+	for raw in offers:
+		var offer: Dictionary = raw
+		labels.append("%s/%s/%dcr" % [
+			str(offer.get("id", "")),
+			str(offer.get("role_id", "")),
+			int(offer.get("cost", 0)),
+		])
+	var result := Recruitment.recruit_offer(_state, _pack, str(chosen["id"]))
+	if bool(result.get("ok", false)):
+		print("  RECRUIT %-18s offers=%s -> %s/%s/%dcr" % [
+			_clock(_t),
+			" + ".join(labels),
+			str(result.get("agent_id", "")),
+			str(chosen.get("role_id", "")),
+			int(result.get("cost", 0)),
+		])
+		return true
+	return false
+
+
+func affordable_offer(offer: Dictionary, resource: String) -> bool:
+	return _state.resource(resource) + 0.0001 >= float(offer.get("cost", 0))
 
 
 func _best_agent(role_id: String) -> String:

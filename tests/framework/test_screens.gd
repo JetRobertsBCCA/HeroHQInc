@@ -127,35 +127,66 @@ func test_roster_disables_training_without_funds() -> void:
 	roster.free()
 
 
-func test_roster_offers_an_affordable_first_recruit() -> void:
+func test_roster_shows_two_affordable_offer_cards() -> void:
 	var pack := _pack()
 	var state := Simulation.new_state(pack, 1, 1000)
 	var roster := RosterScreen.new()
 	roster.refresh(pack, state)
-	var button := roster.recruit_button()
-	assert_true(button != null, "a recruit offer is shown")
-	assert_false(button.disabled, "the first recruit is affordable with starting funds")
+	var ids := roster.recruit_offer_ids()
+	assert_eq(ids.size(), 2, "the Heroes screen shows two offers")
+	assert_true(ids[0] != ids[1], "the offers are distinct")
+	var enabled := 0
+	var first_enabled := ""
+	for agent_id in ids:
+		var button := roster.recruit_offer_button(agent_id)
+		var card := roster.recruit_offer_card(agent_id)
+		assert_true(button != null, "offer %s has a hire button" % agent_id)
+		assert_true(card != null, "offer %s has a visible card" % agent_id)
+		if button != null:
+			assert_true(button.text.contains("Credits"), "offer %s shows its exact Credit price" % agent_id)
+			if not button.disabled:
+				enabled += 1
+				if first_enabled.is_empty():
+					first_enabled = agent_id
+	assert_true(enabled > 0, "at least one offer is affordable with starting funds")
 	var received: Array = []
-	roster.recruit_requested.connect(func(role_id: String) -> void: received.append(role_id))
-	button.emit_signal("pressed")
-	assert_eq(received.size(), 1, "pressing recruit emits exactly one request")
+	roster.recruit_requested.connect(func(agent_id: String) -> void: received.append(agent_id))
+	roster.recruit_offer_button(first_enabled).emit_signal("pressed")
+	assert_eq(received.size(), 1, "pressing one offer emits exactly one request")
+	assert_eq(str(received[0]), first_enabled, "the request carries the chosen offer id")
 	roster.free()
 
 
-func test_roster_targets_a_recruit_role() -> void:
+func test_roster_offer_cards_show_role_tier_attributes_and_price() -> void:
 	var pack := _pack()
 	var state := Simulation.new_state(pack, 1, 1000)
-	state.resources["credits"] = 1000.0
 	var roster := RosterScreen.new()
 	roster.refresh(pack, state)
-	assert_true(roster.recruit_role_option() != null, "the recruit panel offers a role picker")
-	roster.select_recruit_role("tech")
-	assert_eq(roster.recruit_role(), "tech", "the chosen role sticks")
-	var received: Array = []
-	roster.recruit_requested.connect(func(role_id: String) -> void: received.append(role_id))
-	roster.recruit_button().emit_signal("pressed")
-	assert_eq(received.size(), 1, "recruiting emits one request")
-	assert_eq(str(received[0]), "tech", "the request carries the chosen role")
+	var offers := Recruitment.offers(state, pack)
+	assert_eq(offers.size(), 2, "two core offers back the two cards")
+	for raw_offer in offers:
+		var offer: Dictionary = raw_offer
+		var agent_id := str(offer["id"])
+		var role_id := str(offer["role_id"])
+		var card := roster.recruit_offer_card(agent_id)
+		assert_true(card != null, "offer %s has a card" % agent_id)
+		if card == null:
+			continue
+		var role_label := card.find_child("OfferRole_*", true, false) as Label
+		var attrs_label := card.find_child("OfferAttrs_*", true, false) as Label
+		var fit_label := card.find_child("OfferFit_*", true, false) as Label
+		assert_true(role_label != null, "offer %s names its role" % agent_id)
+		assert_true(attrs_label != null, "offer %s shows attributes" % agent_id)
+		assert_true(fit_label != null, "offer %s explains its roster fit" % agent_id)
+		if role_label != null:
+			assert_true(role_label.text.contains(pack.label(str(pack.role(role_id).get("name_key", "")), role_id)), "offer %s shows the role name" % agent_id)
+			assert_true(role_label.text.contains(pack.label("tiers.%s" % str(offer["tier_id"]), str(offer["tier_id"]))), "offer %s shows the tier" % agent_id)
+		if attrs_label != null:
+			assert_true(attrs_label.text.contains("Power"), "offer %s shows packed attributes" % agent_id)
+		if fit_label != null:
+			assert_true(fit_label.text.begins_with("Adds"), "offer %s states what it adds" % agent_id)
+		var button := roster.recruit_offer_button(agent_id)
+		assert_true(button != null and button.text.contains(str(offer["cost"])), "offer %s exposes its exact cost" % agent_id)
 	roster.free()
 
 

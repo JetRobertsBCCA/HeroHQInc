@@ -71,7 +71,7 @@ func _play() -> void:
 	_ok(_state().tasks_completed() == 1, "the completion is counted once")
 	_ok(_objective_step() == 2, "guidance moves past the first deployment")
 
-	# --- Heroes: train, then hire a Tech through the role picker ------------
+	# --- Heroes: train, then hire the visible Tech offer --------------------
 	await _select_tab("heroes")
 	var roster := _roster()
 	_ok(roster != null, "heroes tab built the roster")
@@ -83,8 +83,8 @@ func _play() -> void:
 
 	var recruit_start := _state().agents.size()
 	# Screens are rebuilt on every refresh, so never hold one across an await.
-	_ok(_roster().recruit_role_option() != null, "the recruit panel offers a role picker")
-	_ok(await _recruit("tech"), "the role picker recruits")
+	_ok(_roster().recruit_offer_count() == 2, "the Heroes panel shows two offers")
+	_ok(await _recruit("tech"), "the visible Tech offer recruits")
 	_ok(_state().agents.size() == recruit_start + 1, "one hire adds exactly one operative")
 	var tech := _first_agent_with_role("tech")
 	_ok(not tech.is_empty(), "the requested Tech joins on the first hire")
@@ -265,14 +265,21 @@ func _recruit(role_id: String = "") -> bool:
 	if roster == null:
 		_failures.append("no roster screen")
 		return false
-	roster.select_recruit_role(role_id)
-	await process_frame
-	var button := roster.recruit_button()
-	if button == null:
-		_failures.append("no recruit button")
+	var chosen := ""
+	for raw_offer in Recruitment.offers(_state(), _pack()):
+		var offer: Dictionary = raw_offer
+		if not role_id.is_empty() and str(offer.get("role_id", "")) != role_id:
+			continue
+		var button := roster.recruit_offer_button(str(offer.get("id", "")))
+		if button != null and not button.disabled:
+			chosen = str(offer.get("id", ""))
+			break
+	if chosen.is_empty():
+		_failures.append("no affordable offer for role '%s'" % role_id)
 		return false
-	if button.disabled:
-		_failures.append("recruit button is disabled")
+	var button := roster.recruit_offer_button(chosen)
+	if button == null or button.disabled:
+		_failures.append("the selected offer is not pressable")
 		return false
 	button.pressed.emit()
 	await process_frame
