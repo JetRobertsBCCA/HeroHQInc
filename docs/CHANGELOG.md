@@ -3,6 +3,61 @@
 All work on HERO//HQ and the shared framework. Milestones follow Part D of the
 design specification.
 
+## M1.20.1 — Real-UI playthrough earns the City gate (2026-11-05)
+
+Status: development verification complete headlessly; no formal reviewer
+playtest or Android pass was started.
+
+### What was wrong
+
+`tooling/playthrough_demo.gd` was advertised as a fresh-save, real-UI
+playthrough, but it replaced the save's Credits with 100,000 after the first
+Street operation. That skipped the Command Level 3 economy and let the tool
+reach Signal Pursuit without earning City. On canonical main at `4737565` it
+failed 10 checks because the fresh UI path was still Command Level 1.
+
+### What changed
+
+- Removed the Credit grant and every direct state mutation. The demo now starts
+  from the pack's 50 Credits and 0 Intel and checks that starting balance.
+- Added a UI-only progression policy. It deploys every idle hero through the
+  real Missions buttons, settles the earliest completion with the manual clock,
+  and only trains or hires when the earned balance can pay for it.
+- The starter's first training session and the visible Tech offer are earned
+  normally. The Tech must be on one of the two offer cards; the demo presses
+  that card and never calls `Recruitment.recruit` or scans a hidden slot.
+- After the Tech hire, it saves the two-slot `s_raid` lineup through the Teams
+  screen, then earns Support and Vanguard from visible offers. It reaches City
+  through normal Street work and trains the Tech only after the gate opens.
+- Preserved the Signal Pursuit Intel check, lifetime-Credits loop, payout
+  research purchase, starter level-7 training, two-step rebirth, roster/lineup
+  survival and save/reload checks.
+
+### Result
+
+`tooling/playthrough_demo.gd` exits **0** with **PASS in-game playthrough**.
+
+- Started at 50 Credits / 0 Intel / 1 hero. The first offer pair was Tech at 50
+  and Elite Support at 300; Tech was hired at 0:40 through its visible card.
+  The refresh then exposed Support at 52 and Vanguard at 54, both hired at 2:00.
+- City / Command Level 3 arrived at **6:10**: 47 dispatches, 47 completed
+  operations, 1,628 lifetime Credits, 1,447 current Credits, 4 agents and 4
+  roles. No resource or command level was written directly.
+- Tech reached rating 110 in 5 sessions at 6:10. Signal Pursuit then deployed
+  and paid Intel.
+- The rebirth gate closed at 12:20: 19 work cycles cleared the 4,000 lifetime
+  Credits threshold, research bought rank 1 and spent 15 Intel (53 -> 38), and
+  the starter reached level 7 after 40 sessions. Lifetime was 4,522 Credits.
+- Both rebirth taps banked chips; the four-agent roster, starter level reset,
+  cleared assignments and saved `s_raid` lineup all survived the reload.
+
+### Checks
+
+- Godot headless suite: **159/159 passed**.
+- `tooling/validate_packs.gd`: `OK hero_hq`, 1 pack checked, 0 invalid.
+- `git diff --check`: clean.
+- No formal reviewer playtest was started.
+
 ## M1.20 — Two visible recruitment offers (2026-11-05)
 
 Status: development verification complete headlessly and with 360×640 windowed

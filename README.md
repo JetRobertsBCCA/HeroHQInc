@@ -33,7 +33,7 @@ godot --headless --path . -s res://tooling/balance_report.gd
 # play seven days with rebirth, and fail if any wait exceeds the boredom budget
 godot --headless --path . -s res://tooling/long_run_report.gd
 
-# play the whole game through the real UI, then restore your save
+# play the whole game through the real UI with no grants, then restore your save
 godot --headless --path . -s res://tooling/playthrough_demo.gd
 
 # capture every tab to PNG at 360x640 (windowed, restores your save)
@@ -183,7 +183,7 @@ tooling/validate_packs.gd  CLI pack validator (CI gate)
 tooling/demo_loop.gd       headless walkthrough of the loop
 tooling/balance_report.gd  greedy pacing simulation + curve report
 tooling/long_run_report.gd 7-day rebirth model + boredom-budget check
-tooling/playthrough_demo.gd  real-UI playthrough, fresh save to rebirth
+tooling/playthrough_demo.gd  real-UI playthrough, fresh save to rebirth, no grants
 tooling/ui_capture.gd      windowed PNG capture of every tab
 tooling/network_capture.gd  controlled network state captures
 tooling/missions_viewport_capture.gd  strict Missions fresh/active/patrol/paused/locked/national capture
@@ -235,6 +235,16 @@ Intel. The current deterministic fresh-save route with no grants reaches City at
 6:00 in-game with 34 dispatches, 44 completed operations, 1,624 lifetime
 Credits, 4 agents and 4 roles; that route found no deadlock, with a longest
 completion gap of 40 seconds.
+
+The separate real-UI no-grant check, `tooling/playthrough_demo.gd`, now starts
+with the pack's 50 Credits and 0 Intel, hires Tech through the visible 50-Credit
+card at 0:40, earns Support and Vanguard from refreshed visible offers, and
+reaches City at 6:10 with 47 dispatches, 47 completed operations, 1,628 lifetime
+Credits, 4 agents and 4 roles. It then trains the Tech to 110, clears Signal
+Pursuit, buys payout research, raises Volt to level 7 and completes the
+two-step rebirth; the run restores the player's save and reports PASS. It
+presses the real board, offer, training, research, team and rebirth controls and
+never grants Credits or calls the hidden role-targeted recruit API.
 
 Level 4 asks for 5 agents, 40 completed operations, 3,500 lifetime Credits,
 heroes in 4 roles and one completed squad operation, then unlocks National
